@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// import 'package:intl/intl.dart'; // <-- Đã xóa vì không cần
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-// Import Models (Chỉ giữ lại User)
-import 'table/user.dart'; // <-- Bỏ comment, vì hàm login cần model này
+// Import Models
+import 'table/user.dart';
+import 'table/home_summary.dart'; // 👈 THÊM IMPORT NÀY
 
 class ApiService {
   // --- 👇 BẮT ĐẦU SỬA LỖI SINGLETON ---
@@ -48,8 +48,6 @@ class ApiService {
   /// ---------------------------------------------------
   /// 👤 Xác thực (Authentication)
   /// ---------------------------------------------------
-
-  // --- 👇 THÊM LẠI HÀM LOGIN (TỪ NGỮ CẢNH TRƯỚC) ---
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
@@ -70,15 +68,12 @@ class ApiService {
           print("Cảnh báo: Đăng nhập thành công nhưng không nhận được token.");
         }
 
-        // Sửa logic: Chỉ kiểm tra status, role sẽ được kiểm tra ở Flutter
         if (user.status == 'active') {
           return user;
         } else {
           throw Exception('❌ Tài khoản của bạn đã bị vô hiệu hóa.');
         }
       } else {
-        // 👇 *** SỬA LỖI LINTER ***
-        // Không cần 'return' vì _handleApiError trả về 'Never'
         _handleApiError(response, 'Đăng nhập thất bại');
       }
     } catch (e) {
@@ -88,7 +83,27 @@ class ApiService {
     }
   }
 
-  // --- (Tất cả các hàm API khác đã bị xóa) ---
+  // --- 👇 BẮT ĐẦU THÊM MỚI ---
+  /// ---------------------------------------------------
+  /// 🏠 Màn hình Trang chủ (Giáo viên/Admin)
+  /// ---------------------------------------------------
+  Future<HomeSummary> fetchHomeSummary(int userId) async {
+    final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        // Dùng utf8.decode để tránh lỗi font tiếng Việt
+        return HomeSummary.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi khi tải dữ liệu trang chủ');
+      }
+    } catch (e) {
+      print("fetchHomeSummary Error: $e");
+      rethrow;
+    }
+  }
+  // --- 👆 KẾT THÚC THÊM MỚI ---
+
 
   /// ---------------------------------------------------
   /// ⚙️ Hàm xử lý lỗi API chung (Private Helper)
@@ -97,16 +112,13 @@ class ApiService {
     print(
         "API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
     try {
-      // Thử decode bằng utf8 trước
       final error = jsonDecode(utf8.decode(response.bodyBytes));
       throw Exception(
           error['message'] ?? '$defaultMessage (Code: ${response.statusCode})');
     } catch (e) {
-      // Nếu decode utf8 thất bại (ví dụ: body không phải JSON), dùng message mặc định
       if (e is FormatException) {
         throw Exception('$defaultMessage (Code: ${response.statusCode})');
       }
-      // Ném lại lỗi đã được parse (từ try)
       rethrow;
     }
   }

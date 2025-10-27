@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart'; // <-- 1. THÊM IMPORT NÀY
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -196,13 +197,16 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
           child: ElevatedButton(
+            // --- 👇 2. THAY ĐỔI LOGIC TRONG NÚT NÀY ---
             onPressed: () {
-              // TODO: Xử lý đăng xuất
-              // Ví dụ: Quay lại màn hình Login
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
+              // Xử lý đăng xuất
+              // Quay lại màn hình Login và xóa tất cả các màn hình trước đó
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+              );
             },
+            // --- 👆 KẾT THÚC THAY ĐỔI ---
             style: ElevatedButton.styleFrom(
               backgroundColor: logoutRed,
               foregroundColor: Colors.white,

@@ -1,124 +1,194 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
+import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
+import 'package:http/http.dart' as http; // For making HTTP requests
 
-// Import Models
+// Import your data models
 import 'table/user.dart';
-import 'table/home_summary.dart'; // 👈 THÊM IMPORT NÀY
+import 'table/home_summary.dart';
+import 'models/schedule.dart'; // Make sure this path is correct
 
 class ApiService {
-  // --- 👇 BẮT ĐẦU SỬA LỖI SINGLETON ---
+  // --- Singleton Pattern ---
+  // Private constructor
+  ApiService._internal();
+  // Static instance
   static final ApiService _instance = ApiService._internal();
-
+  // Factory constructor to return the static instance
   factory ApiService() {
     return _instance;
   }
+  // --- End Singleton Pattern ---
 
-  ApiService._internal();
-
-  // --- 👆 KẾT THÚC SỬA LỖI SINGLETON ---
-
-  // --- 👇 BẮT ĐẦU THAY ĐỔI BASE URL ---
+  // --- Base URL Configuration ---
+  // Determines the API base URL based on the platform (Web or Mobile Emulator)
   static String get baseUrl {
     if (kIsWeb) {
-      // 1. Đang chạy trên WEB (trình duyệt)
+      // Use localhost for web builds
       return 'http://localhost:8000/api';
     } else {
-      // 2. Đang chạy trên MOBILE (Giả lập Android)
+      // Use 10.0.2.2 for Android Emulator to connect to host's localhost
       return 'http://10.0.2.2:8000/api';
+      // Note: For physical devices, replace 10.0.2.2 with your computer's LAN IP.
     }
   }
+  // --- End Base URL Configuration ---
 
-  // --- 👆 KẾT THÚC THAY ĐỔI BASE URL ---
+  // --- Authentication Token ---
+  // Stores the authentication token received after login
+  String? _token;
+  // --- End Authentication Token ---
 
-  String? _token; // Biến này bây giờ sẽ được chia sẻ toàn ứng dụng
-
-  // --- 👇 SỬA LỖI: THÊM `return headers;` ---
+  // --- Helper for HTTP Headers ---
+  // Creates standard headers for API requests, adding Authorization if needed.
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'Content-Type': 'application/json', // We send JSON
+      'Accept': 'application/json', // We expect JSON response
     };
+    // Add the Bearer token if the request requires authentication and the token exists
     if (needsAuth && _token != null) {
       headers['Authorization'] = 'Bearer $_token';
     }
-    return headers; // <-- ĐÂY LÀ SỬA LỖI
+    return headers;
   }
+  // --- End Helper for HTTP Headers ---
+
+  // ===================================================
+  // API Methods
+  // ===================================================
 
   /// ---------------------------------------------------
-  /// 👤 Xác thực (Authentication)
+  /// 👤 Authentication: Login
   /// ---------------------------------------------------
+  /// Attempts to log in the user with email and password.
+  /// Returns the User object on success. Stores the auth token internally.
+  /// Throws an Exception on failure (network error, invalid credentials, inactive account).
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
       final response = await http.post(
         loginUrl,
-        headers: _getHeaders(needsAuth: false),
+        headers: _getHeaders(needsAuth: false), // Login doesn't require prior auth
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200) { // HTTP 200 OK
         final data = jsonDecode(response.body);
         final User user = User.fromJson(data['user']);
 
+        // Store the token if provided by the backend
         if (data['token'] != null) {
           _token = data['token'];
-          print("Đăng nhập thành công, Token đã được lưu!");
+          print("Login successful, Token stored!");
         } else {
-          print("Cảnh báo: Đăng nhập thành công nhưng không nhận được token.");
+          // This indicates a potential backend issue if login succeeds without a token
+          print("Warning: Login successful but no token received.");
         }
 
+        // Check if the user account is active before allowing login
         if (user.status == 'active') {
           return user;
         } else {
-          throw Exception('❌ Tài khoản của bạn đã bị vô hiệu hóa.');
+          throw Exception('❌ Your account has been disabled.');
         }
       } else {
-        _handleApiError(response, 'Đăng nhập thất bại');
+        // Use the error handler for non-200 responses
+        _handleApiError(response, 'Login failed');
       }
     } catch (e) {
+      // Catch network errors or exceptions thrown by _handleApiError
       print("Login Error: $e");
-      if (e is Exception) rethrow;
-      throw Exception('Không thể kết nối đến máy chủ.');
+      if (e is Exception) rethrow; // Keep specific exception messages
+      throw Exception('Could not connect to the server.'); // Generic fallback
     }
   }
 
-  // --- 👇 BẮT ĐẦU THÊM MỚI ---
   /// ---------------------------------------------------
-  /// 🏠 Màn hình Trang chủ (Giáo viên/Admin)
+  /// 🏠 Home Screen Data (Admin/Teacher)
   /// ---------------------------------------------------
+  /// Fetches summary data for the home screen based on the user ID.
+  /// Requires authentication (sends the stored token).
+  /// Returns a HomeSummary object.
+  /// Throws an Exception on failure.
   Future<HomeSummary> fetchHomeSummary(int userId) async {
     final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
       if (response.statusCode == 200) {
-        // Dùng utf8.decode để tránh lỗi font tiếng Việt
+        // Decode using UTF-8 to handle special characters correctly
         return HomeSummary.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
-        _handleApiError(response, 'Lỗi khi tải dữ liệu trang chủ');
+        _handleApiError(response, 'Error loading home data');
       }
     } catch (e) {
       print("fetchHomeSummary Error: $e");
-      rethrow;
+      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
     }
   }
-  // --- 👆 KẾT THÚC THÊM MỚI ---
-
 
   /// ---------------------------------------------------
-  /// ⚙️ Hàm xử lý lỗi API chung (Private Helper)
+  /// 🗓️ Schedule Management - Fetch List
   /// ---------------------------------------------------
+  /// Fetches the list of all schedules.
+  /// Requires authentication.
+  /// Returns a List of Schedule objects.
+  /// Throws an Exception on failure.
+  Future<List<Schedule>> fetchSchedules() async {
+    final Uri url = Uri.parse('$baseUrl/schedules');
+    try {
+      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      if (response.statusCode == 200) {
+        // Decode response using UTF-8
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+
+        List<dynamic> dataList;
+        // Check if the response is paginated (Laravel standard) or a direct list
+        if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data']; // Extract list from 'data' key
+        } else if (body is List) {
+          dataList = body; // Response is already a list
+        } else {
+          // Unexpected response format
+          throw Exception('Invalid data format received');
+        }
+
+        // Convert the list of JSON maps into a list of Schedule objects
+        return dataList.map((item) => Schedule.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading schedule list');
+      }
+    } catch (e) {
+      print("fetchSchedules Error: $e");
+      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
+    }
+  }
+
+  // ===================================================
+  // Private Helper Methods
+  // ===================================================
+
+  /// ---------------------------------------------------
+  /// ⚙️ General API Error Handler
+  /// ---------------------------------------------------
+  /// Parses standard error responses from the API and throws a formatted Exception.
+  /// The return type 'Never' indicates this function *always* throws an exception.
   Never _handleApiError(http.Response response, String defaultMessage) {
+    // Log detailed error information for debugging
     print(
         "API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
     try {
+      // Attempt to decode the JSON error message from the response body
       final error = jsonDecode(utf8.decode(response.bodyBytes));
+      // Throw an exception with the message from the API, or a fallback message
       throw Exception(
           error['message'] ?? '$defaultMessage (Code: ${response.statusCode})');
     } catch (e) {
-      if (e is FormatException) {
+      // If decoding fails (e.g., non-JSON response) or it's not the expected format
+      if (e is FormatException || e is TypeError) {
+        // Throw an exception with the default message and status code
         throw Exception('$defaultMessage (Code: ${response.statusCode})');
       }
+      // If the exception was already parsed successfully (in the 'try' block), rethrow it
       rethrow;
     }
   }

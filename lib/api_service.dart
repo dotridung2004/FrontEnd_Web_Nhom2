@@ -1,7 +1,12 @@
 import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
+<<<<<<< HEAD
 
+=======
+import 'models/course.dart'; // 👈 THÊM DÒNG NÀY
+import 'models/class_course.dart';
+>>>>>>> 91fd3d0 (Hoc phan)
 // Import your data models
 import 'table/user.dart';
 import 'table/home_summary.dart';
@@ -162,7 +167,82 @@ class ApiService {
       rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
     }
   }
+<<<<<<< HEAD
 
+=======
+// ... (sau hàm fetchSchedules) ...
+
+  /// ---------------------------------------------------
+  /// 📚 Course Management - Fetch List
+  /// ---------------------------------------------------
+  /// Fetches the list of all courses.
+  /// Requires authentication.
+  /// Returns a List of Course objects.
+  /// Throws an Exception on failure.
+  Future<List<Course>> fetchCourses() async {
+    final Uri url = Uri.parse('$baseUrl/courses'); // 👈 THAY ĐỔI URL
+    try {
+      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      if (response.statusCode == 200) {
+        // Decode response using UTF-8
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+
+        List<dynamic> dataList;
+        if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else if (body is List) {
+          dataList = body;
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        // 👇 THAY ĐỔI: Parse sang Course
+        return dataList.map((item) => Course.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading course list');
+      }
+    } catch (e) {
+      print("fetchCourses Error: $e");
+      rethrow;
+    }
+  }
+  // ... (sau hàm fetchCourses) ...
+
+  /// ---------------------------------------------------
+  /// 🏫 Class Course Management - Fetch List
+  /// ---------------------------------------------------
+  /// Fetches the list of all class-courses.
+  /// Requires authentication.
+  /// Returns a List of ClassCourse objects.
+  /// Throws an Exception on failure.
+  Future<List<ClassCourse>> fetchClassCourses() async {
+    // 👈 THAY ĐỔI URL
+    final Uri url = Uri.parse('$baseUrl/class-courses');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+
+        List<dynamic> dataList;
+        if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else if (body is List) {
+          dataList = body;
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        // 👇 THAY ĐỔI: Parse sang ClassCourse
+        return dataList.map((item) => ClassCourse.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading class-course list');
+      }
+    } catch (e) {
+      print("fetchClassCourses Error: $e");
+      rethrow;
+    }
+  }
+>>>>>>> 91fd3d0 (Hoc phan)
   // ===================================================
   // Private Helper Methods
   // ===================================================

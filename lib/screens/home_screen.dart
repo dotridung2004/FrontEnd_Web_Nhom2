@@ -4,11 +4,9 @@ import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
 import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
 import '../screens/lich_hoc_screen.dart'; // 👈 1. THÊM IMPORT NÀY
-<<<<<<< HEAD
-=======
 import '../screens/hoc_phan_screen.dart'; // 👈 2. THÊM IMPORT HOC PHAN
 import '../screens/lop_hoc_phan_screen.dart'; // 👈 3. THÊM IMPORT LOP HOC PHAN
->>>>>>> 91fd3d0 (Hoc phan)
+import '../screens/registered_course_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -138,16 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMenuItem("Ngành học", "NGANH_HOC", onTap: () { /* TODO */ }),
             _buildMenuItem("Phòng học", "PHONG_HOC", onTap: () { /* TODO */ }),
           ]),
-<<<<<<< HEAD
-          _buildExpansionMenuItem("HỌC PHẦN", "HOC_PHAN", children: [
-            _buildMenuItem("Học phần", "HP", onTap: () { /* TODO */ }),
-            _buildMenuItem("Lớp học phần", "LHP", onTap: () { /* TODO */ }),
-            _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
-          ]),
-          _buildMenuItem("GIẢNG VIÊN", "GIANG_VIEN", onTap: () { /* TODO */ }),
-
-          // --- 👇 2. CẬP NHẬT onTAP CHO LỊCH HỌC ---
-=======
 
           // --- 👇 CẬP NHẬT MỤC HỌC PHẦN ---
           _buildExpansionMenuItem("HỌC PHẦN", "HOC_PHAN", children: [
@@ -163,20 +151,27 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMenuItem(
               "Lớp học phần",
               "LHP",
-              // 👇 SỬA DÒNG NÀY
               onTap: () => _onMenuItemSelected(
                   "LHP",
                   "Lớp học phần",
                   const LopHocPhanScreen() // <-- LIÊN KẾT ĐẾN LOPHOCPHANSCREEN
               ),
             ),
-            _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
+            // 👇 SỬA DÒNG NÀY
+            _buildMenuItem(
+                "Học phần đã đăng ký",
+                "HP_DK",
+                onTap: () => _onMenuItemSelected(
+                    "HP_DK",
+                    "Học phần đã đăng ký",
+                    const RegisteredCourseScreen() // <-- LIÊN KẾT ĐẾN REGISTEREDCOURSESCREEN
+                )
+            ),
           ]),
           // --- 👆 KẾT THÚC CẬP NHẬT ---
 
           _buildMenuItem("GIẢNG VIÊN", "GIANG_VIEN", onTap: () { /* TODO */ }),
 
->>>>>>> 91fd3d0 (Hoc phan)
           _buildMenuItem(
             "LỊCH HỌC",
             "LICH_HOC",
@@ -186,18 +181,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const LichHocScreen(), // <--- LIÊN KẾT ĐẾN LichHocScreen
             ),
           ),
-<<<<<<< HEAD
-          // --- 👆 KẾT THÚC CẬP NHẬT ---
-
-          _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
-          _buildMenuDivider(),
-          _buildMenuItem("TÀI KHOẢN", "TAI_KHOAN", onTap: () { /* TODO */ }),
-=======
 
           _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
           _buildMenuDivider(),
           _buildMenuItem("TÀI KHOẢN", "TAI_KOAN", onTap: () { /* TODO */ }),
->>>>>>> 91fd3d0 (Hoc phan)
         ],
       ),
     );

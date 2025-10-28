@@ -1,12 +1,10 @@
 import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
-<<<<<<< HEAD
 
-=======
 import 'models/course.dart'; // 👈 THÊM DÒNG NÀY
 import 'models/class_course.dart';
->>>>>>> 91fd3d0 (Hoc phan)
+import 'models/registered_course.dart';
 // Import your data models
 import 'table/user.dart';
 import 'table/home_summary.dart';
@@ -167,9 +165,7 @@ class ApiService {
       rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
     }
   }
-<<<<<<< HEAD
 
-=======
 // ... (sau hàm fetchSchedules) ...
 
   /// ---------------------------------------------------
@@ -242,7 +238,39 @@ class ApiService {
       rethrow;
     }
   }
->>>>>>> 91fd3d0 (Hoc phan)
+// ... (Bên dưới hàm fetchClassCourses()) ...
+
+  /// ---------------------------------------------------
+  /// 📊 Registered Courses Summary - Fetch List
+  /// ---------------------------------------------------
+  /// Fetches class-courses with student count.
+  Future<List<RegisteredCourse>> fetchRegisteredCourses() async {
+    // 👈 URL phải khớp với route bạn tạo trong api.php
+    final Uri url = Uri.parse('$baseUrl/registered-courses');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        // 👇 Parse sang model RegisteredCourse
+        return dataList.map((item) => RegisteredCourse.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading registered course list');
+      }
+    } catch (e) {
+      print("fetchRegisteredCourses Error: $e");
+      rethrow;
+    }
+  }
   // ===================================================
   // Private Helper Methods
   // ===================================================

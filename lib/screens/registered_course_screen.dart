@@ -54,58 +54,43 @@ class _RegisteredCourseScreenState extends State<RegisteredCourseScreen> { // �
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Header, Nút, Tìm kiếm
-          Wrap(
-            spacing: 24.0, runSpacing: 16.0,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // 1. Nút Thêm và Tìm kiếm (Đã sửa layout)
+          // 👇 === THAY ĐỔI TỪ WRAP THÀNH ROW === 👇
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Đẩy 2 item ra 2 bên
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth > 600) {
-                      return Text(
-                        "Đăng ký học phần", // 👈 7. Đổi Tiêu đề
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
-                      );
-                    }
-                    return SizedBox.shrink();
-                  }
+              // Nút "Đăng ký" (BÊN TRÁI)
+              ElevatedButton.icon(
+                onPressed: () { /* TODO: Xử lý Đăng ký */ },
+                icon: Icon(Icons.add, color: Colors.white, size: 20),
+                label: Text("Đăng ký", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // 👈 8. Đổi tên Nút
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tluBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Nút "Đăng ký"
-                  ElevatedButton.icon(
-                    onPressed: () { /* TODO: Xử lý Đăng ký */ },
-                    icon: Icon(Icons.add, color: Colors.white, size: 20),
-                    label: Text("Đăng ký", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // 👈 8. Đổi tên Nút
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tluBlue,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                    ),
+
+              // Thanh Tìm kiếm (BÊN PHẢI)
+              Container(
+                width: 300,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: "Tìm kiếm",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
                   ),
-                  SizedBox(width: 16),
-                  // Thanh Tìm kiếm (giữ nguyên)
-                  Container(
-                    width: 300,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Tìm kiếm",
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
-                      ),
-                      onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
-                    ),
-                  ),
-                ],
+                  onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
+                ),
               ),
             ],
           ),
+          // 👆 === KẾT THÚC THAY ĐỔI === 👆
           const SizedBox(height: 24),
 
           // 2. Bảng Dữ liệu
@@ -173,3 +158,4 @@ class _RegisteredCourseScreenState extends State<RegisteredCourseScreen> { // �
     );
   }
 }
+

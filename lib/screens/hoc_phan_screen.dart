@@ -23,7 +23,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
   @override
   void initState() {
     super.initState();
-    // Gọi API ngay khi vào trang
     _coursesFuture = _apiService.fetchCourses();
   }
 
@@ -33,12 +32,9 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
     return FutureBuilder<List<Course>>(
       future: _coursesFuture,
       builder: (context, snapshot) {
-        // 1. Trạng thái Đang tải
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
-
-        // 2. Trạng thái Lỗi
         if (snapshot.hasError) {
           return Center(
             child: Text(
@@ -47,14 +43,9 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
             ),
           );
         }
-
-        // 3. Trạng thái Không có dữ liệu
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          // Vẫn hiển thị UI (với bảng rỗng) để người dùng có thể "Thêm"
           return _buildContent(context, []);
         }
-
-        // 4. Trạng thái Thành công
         return _buildContent(context, snapshot.data!);
       },
     );
@@ -67,72 +58,48 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Thanh Tiêu đề, Nút Thêm, và Tìm kiếm
-          Wrap(
-            spacing: 24.0,
-            runSpacing: 16.0,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // 1. Nút Thêm và Tìm kiếm
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Tiêu đề "Học phần" (sẽ ẩn trên mobile)
-              LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth > 600) {
-                      return Text(
-                        "Học phần",
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
-                      );
-                    }
-                    return SizedBox.shrink(); // Ẩn trên màn hình hẹp
-                  }
+              // Nút "Thêm học phần" (BÊN TRÁI)
+              ElevatedButton.icon(
+                onPressed: () { /* TODO: Xử lý Thêm */ },
+                icon: Icon(Icons.add, color: Colors.white, size: 20),
+                label: Text("Thêm học phần", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tluBlue,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
               ),
 
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Nút "Thêm học phần"
-                  ElevatedButton.icon(
-                    onPressed: () { /* TODO: Xử lý Thêm */ },
-                    icon: Icon(Icons.add, color: Colors.white, size: 20),
-                    label: Text("Thêm học phần", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tluBlue,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
+              // Thanh "Tìm kiếm" (BÊN PHẢI)
+              Container(
+                width: 300,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: "Tìm kiếm",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                  ),
-                  SizedBox(width: 16),
-
-                  // Thanh "Tìm kiếm"
-                  Container(
-                    width: 300,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Tìm kiếm",
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12.0),
-                      ),
-                      onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding:
+                    const EdgeInsets.symmetric(vertical: 12.0),
                   ),
-                ],
+                  onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
+                ),
               ),
             ],
           ),
@@ -155,7 +122,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
                     headingRowColor: MaterialStateProperty.all(tluBlue),
                     headingTextStyle: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
-                    // Tiêu đề cột khớp với ảnh
                     columns: const [
                       DataColumn(label: Text('STT')),
                       DataColumn(label: Text('Mã học phần')),
@@ -186,7 +152,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
         DataCell(Text(stt.toString())),
         DataCell(Text(course.code)),
         DataCell(Text(course.name)),
-        // Thêm " Tín chỉ" để khớp với ảnh
         DataCell(Text("${course.credits.toString()} Tín chỉ")),
         DataCell(Text(course.departmentName)),
         DataCell(Text(course.type)),
@@ -216,3 +181,4 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
     );
   }
 }
+

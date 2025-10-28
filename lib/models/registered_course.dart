@@ -1,4 +1,4 @@
-// lib/models/registered_course.dart
+
 import 'dart:convert';
 
 class RegisteredCourse {

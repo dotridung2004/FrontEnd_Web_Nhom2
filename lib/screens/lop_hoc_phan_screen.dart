@@ -67,75 +67,53 @@ class _LopHocPhanScreenState extends State<LopHocPhanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Thanh Tiêu đề, Nút Thêm, và Tìm kiếm
-          Wrap(
-            spacing: 24.0,
-            runSpacing: 16.0,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // 1. Nút Thêm và Tìm kiếm (Đã sửa layout)
+          // 👇 === THAY ĐỔI TỪ WRAP THÀNH ROW === 👇
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Đẩy 2 item ra 2 bên
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Tiêu đề "Lớp học phần"
-              LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth > 600) {
-                      return Text(
-                        "Lớp học phần",
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
-                      );
-                    }
-                    return SizedBox.shrink(); // Ẩn trên màn hình hẹp
-                  }
+              // Nút "Thêm lớp học phần" (BÊN TRÁI)
+              ElevatedButton.icon(
+                onPressed: () { /* TODO: Xử lý Thêm */ },
+                icon: Icon(Icons.add, color: Colors.white, size: 20),
+                label: Text("Thêm lớp học phần", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tluBlue,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
               ),
 
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Nút "Thêm lớp học phần"
-                  ElevatedButton.icon(
-                    onPressed: () { /* TODO: Xử lý Thêm */ },
-                    icon: Icon(Icons.add, color: Colors.white, size: 20),
-                    label: Text("Thêm lớp học phần", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tluBlue,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
+              // Thanh "Tìm kiếm" (BÊN PHẢI)
+              Container(
+                width: 300,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: "Tìm kiếm",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                  ),
-                  SizedBox(width: 16),
-
-                  // Thanh "Tìm kiếm"
-                  Container(
-                    width: 300,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Tìm kiếm",
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12.0),
-                      ),
-                      onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding:
+                    const EdgeInsets.symmetric(vertical: 12.0),
                   ),
-                ],
+                  onChanged: (value) { /* TODO: Xử lý Tìm kiếm */ },
+                ),
               ),
             ],
           ),
+          // 👆 === KẾT THÚC THAY ĐỔI === 👆
           const SizedBox(height: 24),
 
           // 2. Bảng Dữ liệu
@@ -215,3 +193,4 @@ class _LopHocPhanScreenState extends State<LopHocPhanScreen> {
     );
   }
 }
+

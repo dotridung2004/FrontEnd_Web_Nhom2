@@ -1,10 +1,8 @@
-// lib/screens/giang_vien_screen.dart
-
-import 'package:flutter/material.dart'; // <<< IMPORT QUAN TRỌNG NHẤT
+import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
-import '../api_service.dart';     // <<< THÊM IMPORT
-import '../models/lecturer.dart'; // <<< THÊM IMPORT
+import '../api_service.dart';
+import '../models/lecturer.dart'; // <<< Đảm bảo model Lecturer đã được sửa (không có lecturerCode)
 
 class GiangVienScreen extends StatefulWidget {
   const GiangVienScreen({Key? key}) : super(key: key);
@@ -24,8 +22,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Lecturer>> _lecturersFuture;
 
-  // Tạm thời giữ danh sách department tĩnh.
-  // Lý tưởng nhất là fetch danh sách này từ API.
   final List<String> _departments = ['Công nghệ thông tin', 'Công trình', 'Cơ khí', 'Kinh tế'];
   String? _selectedDepartment;
   final TextEditingController _searchController = TextEditingController();
@@ -66,7 +62,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       _filteredLecturers = _allLecturers.where((lecturer) {
         final departmentMatch = _selectedDepartment == null || lecturer.departmentName == _selectedDepartment;
         final searchMatch = lecturer.fullName.toLowerCase().contains(query) ||
-            lecturer.lecturerCode.toLowerCase().contains(query) ||
             lecturer.email.toLowerCase().contains(query);
         return departmentMatch && searchMatch;
       }).toList();
@@ -83,7 +78,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   // --- LOGIC CHO THÊM / SỬA / XÓA ---
 
   void _onSaveLecturer(bool isEditing, Lecturer lecturer, String password) async {
-    // Hiển thị loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -104,11 +98,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           const SnackBar(content: Text('Thêm giảng viên thành công!'), backgroundColor: Colors.green),
         );
       }
-      Navigator.of(context).pop(); // Tắt loading
-      Navigator.of(context).pop(); // Tắt dialog form
-      _loadLecturers(); // Tải lại dữ liệu
+      Navigator.of(context).pop();
+      Navigator.of(context).pop();
+      _loadLecturers();
     } catch (e) {
-      Navigator.of(context).pop(); // Tắt loading
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
       );
@@ -161,13 +155,12 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     final isEditing = lecturer != null;
     final formKey = GlobalKey<FormState>();
 
-    final codeController = TextEditingController(text: isEditing ? lecturer.lecturerCode : '');
-    final nameController = TextEditingController(text: isEditing ? lecturer.fullName : '');
-    final dobController = TextEditingController(text: isEditing ? lecturer.dob : '');
-    final emailController = TextEditingController(text: isEditing ? lecturer.email : '');
-    final phoneController = TextEditingController(text: isEditing ? lecturer.phoneNumber : '');
+    final nameController = TextEditingController(text: isEditing ? lecturer!.fullName : ''); // Sử dụng lecturer! để khẳng định không null khi isEditing=true
+    final dobController = TextEditingController(text: isEditing ? lecturer!.dob : '');
+    final emailController = TextEditingController(text: isEditing ? lecturer!.email : '');
+    final phoneController = TextEditingController(text: isEditing ? lecturer!.phoneNumber : '');
 
-    String? selectedDepartment = (isEditing && _departments.contains(lecturer.departmentName))
+    String? selectedDepartment = (isEditing && _departments.contains(lecturer!.departmentName))
         ? lecturer.departmentName
         : null;
 
@@ -176,13 +169,13 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         final dialogContentBgColor = Color(0xFFF5F5F5);
-        return StatefulBuilder( // Use StatefulBuilder to manage dropdown state inside dialog
+        return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
               child: SizedBox(
                 width: 800,
-                child: SingleChildScrollView( // Add SingleChildScrollView to prevent overflow
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -224,13 +217,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                       child: Column(
                                         children: [
                                           _buildTextField(
-                                            label: 'Mã giảng viên',
-                                            controller: codeController,
-                                            hint: 'Nhập mã giảng viên',
-                                            enabled: !isEditing,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _buildTextField(
                                             label: 'Tên giảng viên',
                                             controller: nameController,
                                             hint: 'Nhập tên giảng viên',
@@ -249,6 +235,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                             controller: emailController,
                                             hint: 'Nhập email',
                                             keyboardType: TextInputType.emailAddress,
+                                            enabled: !isEditing,
                                           ),
                                           const SizedBox(height: 20),
                                           _buildTextField(
@@ -261,7 +248,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                           _buildDepartmentDropdown(
                                             selectedValue: selectedDepartment,
                                             onChanged: (value) {
-                                              setDialogState(() { // Update state inside dialog
+                                              setDialogState(() {
                                                 selectedDepartment = value;
                                               });
                                             },
@@ -291,10 +278,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                         if (formKey.currentState!.validate()) {
                                           final departmentId = _departments.indexOf(selectedDepartment!) + 1;
 
+                                          // <<< ĐÃ SỬA LỖI Ở ĐÂY:
+                                          // Loại bỏ hoàn toàn 'lecturerCode' khỏi constructor call
                                           final newLecturer = Lecturer(
-                                            id: isEditing ? lecturer.id : 0,
+                                            id: isEditing ? lecturer!.id : 0, // Sử dụng lecturer!
                                             departmentId: departmentId,
-                                            lecturerCode: codeController.text,
                                             fullName: nameController.text,
                                             email: emailController.text,
                                             dob: dobController.text,
@@ -376,11 +364,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                           Expanded(
                             child: Column(
                               children: [
-                                _buildInfoField(label: 'Mã giảng viên', value: lecturer.lecturerCode),
-                                const SizedBox(height: 20),
                                 _buildInfoField(label: 'Tên giảng viên', value: lecturer.fullName),
                                 const SizedBox(height: 20),
                                 _buildInfoField(label: 'Ngày sinh', value: lecturer.dob ?? 'N/A'),
+                                const SizedBox(height: 20),
+                                _buildInfoField(label: 'Khoa', value: lecturer.departmentName),
                               ],
                             ),
                           ),
@@ -391,8 +379,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                 _buildInfoField(label: 'Email', value: lecturer.email),
                                 const SizedBox(height: 20),
                                 _buildInfoField(label: 'Số điện thoại', value: lecturer.phoneNumber ?? 'N/A'),
-                                const SizedBox(height: 20),
-                                _buildInfoField(label: 'Khoa', value: lecturer.departmentName),
                               ],
                             ),
                           ),
@@ -425,7 +411,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
   // --- CÁC WIDGET HELPER ---
-  // (Không có thay đổi trong các widget helper, giữ nguyên code của bạn)
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -756,7 +741,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                   dataRowMaxHeight: 52.0,
                   columns: const [
                     DataColumn(label: Text('STT')),
-                    DataColumn(label: Text('Mã giảng viên')),
                     DataColumn(label: Text('Tên giảng viên')),
                     DataColumn(label: Text('Ngày sinh')),
                     DataColumn(label: Text('Email')),
@@ -781,7 +765,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     return DataRow(
       cells: [
         DataCell(Text(index.toString())),
-        DataCell(Text(lecturer.lecturerCode)),
         DataCell(Text(lecturer.fullName)),
         DataCell(Text(lecturer.dob ?? 'N/A')),
         DataCell(Text(lecturer.email)),

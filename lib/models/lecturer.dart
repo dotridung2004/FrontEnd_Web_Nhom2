@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 class Lecturer {
   final int id;
-  final String lecturerCode;
+  // <<< XÓA lecturerCode
   final String fullName;
   final String email;
   final String? dob;
@@ -12,7 +12,7 @@ class Lecturer {
 
   Lecturer({
     required this.id,
-    required this.lecturerCode,
+    // <<< XÓA lecturerCode
     required this.fullName,
     required this.email,
     this.dob,
@@ -23,7 +23,6 @@ class Lecturer {
 
 
   factory Lecturer.fromJson(Map<String, dynamic> json) {
-    // <<< SỬA Ở ĐÂY: Đọc 'date_of_birth' từ JSON
     String? rawDob = json['date_of_birth'];
     String formattedDob = '';
 
@@ -38,10 +37,10 @@ class Lecturer {
 
     return Lecturer(
       id: json['id'] ?? 0,
-      lecturerCode: json['user_code'] ?? '',
+      // <<< XÓA lecturerCode
       fullName: json['name'] ?? 'Không có tên',
       email: json['email'] ?? '',
-      dob: formattedDob.isEmpty ? null : formattedDob, // Gán giá trị đã format
+      dob: formattedDob.isEmpty ? null : formattedDob,
       phoneNumber: json['phone_number'],
       departmentName: json['department']?['name'] ?? 'N/A',
       departmentId: json['department_id'] ?? 0,
@@ -52,10 +51,10 @@ class Lecturer {
     return {
       'name': fullName,
       'email': email,
-      'user_code': lecturerCode,
+      // <<< XÓA user_code
       'department_id': departmentId,
       'phone_number': phoneNumber,
-      'date_of_birth': dob, // <<< SỬA Ở ĐÂY: Gửi lên key 'date_of_birth'
+      'date_of_birth': dob,
     };
   }
 }

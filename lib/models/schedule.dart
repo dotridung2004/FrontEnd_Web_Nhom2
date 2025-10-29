@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'package:intl/intl.dart'; // Import for parsing date
 
-// Helper
+// Helper remains the same
 List<Schedule> scheduleListFromJson(String str) {
   final List<dynamic> data = json.decode(str);
   return List<Schedule>.from(data.map((x) => Schedule.fromJson(x)));
@@ -8,11 +9,18 @@ List<Schedule> scheduleListFromJson(String str) {
 
 class Schedule {
   final int id;
+  // Fields for displaying in the table
   final String teacherName;
-  final String classCode; // Lớp học phần
-  final String courseName; // Học phần
-  final String semester; // Học kỳ
+  final String classCode;
+  final String courseName;
+  final String semester;
   final String roomName;
+
+  // --- NEW: Fields needed for the Edit/View Form ---
+  final int? classCourseAssignmentId;
+  final int? roomId;
+  final DateTime? date; // Store as DateTime for DatePicker
+  final String session;
 
   Schedule({
     required this.id,
@@ -21,30 +29,42 @@ class Schedule {
     required this.courseName,
     required this.semester,
     required this.roomName,
+    // --- NEW ---
+    this.classCourseAssignmentId,
+    this.roomId,
+    this.date,
+    required this.session,
   });
 
-  /// Factory constructor để parse JSON từ API
-  ///
-  /// Chúng ta phải *giả định* cấu trúc JSON mà Laravel trả về.
-  /// Dựa trên API trước đây, có thể nó sẽ lồng các đối tượng.
+  /// Factory constructor to parse the FLATTENED JSON from the updated API
   factory Schedule.fromJson(Map<String, dynamic> json) {
+
+    // Helper function to safely parse date string (Y-m-d)
+    DateTime? parseDate(String? dateString) {
+      if (dateString == null) return null;
+      try {
+        return DateFormat('yyyy-MM-dd').parse(dateString);
+      } catch (e) {
+        print("Error parsing date: $dateString - $e");
+        return null;
+      }
+    }
+
     return Schedule(
       id: json['id'] ?? 0,
 
-      // Lấy tên Giảng viên (lồng nhau)
-      teacherName: json['class_course_assignment']?['teacher']?['name'] ?? 'N/A',
+      // Read directly from the keys provided by ScheduleController::index()
+      teacherName: json['teacherName'] ?? 'N/A',
+      classCode:   json['classCode'] ?? 'N/A',
+      courseName:  json['courseName'] ?? 'N/A',
+      semester:    json['semester'] ?? 'N/A',
+      roomName:    json['roomName'] ?? 'N/A',
 
-      // Lấy tên Lớp học phần (lồng nhau)
-      classCode: json['class_course_assignment']?['class_model']?['name'] ?? 'N/A',
-
-      // Lấy tên Học phần (lồng nhau)
-      courseName: json['class_course_assignment']?['course']?['name'] ?? 'N/A',
-
-      // Giả sử 'semester' (Học kỳ) là một trường trực tiếp
-      semester: json['semester'] ?? 'Học kỳ N/A',
-
-      // Lấy tên Phòng (lồng nhau)
-      roomName: json['room']?['name'] ?? 'N/A',
+      // --- NEW: Parse fields needed for the form ---
+      classCourseAssignmentId: json['class_course_assignment_id'] as int?,
+      roomId:                  json['room_id'] as int?,
+      date:                    parseDate(json['date']), // Parse the date string
+      session:                 json['session'] ?? 'N/A',
     );
   }
 }

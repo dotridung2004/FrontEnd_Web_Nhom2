@@ -1,51 +1,67 @@
 import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
+import 'package:intl/intl.dart'; // For date formatting
 
-// Import your data models
+// Đảm bảo đường dẫn đến model của bạn là chính xác
+import 'models/schedule.dart'; // <<< *** PHẢI CẬP NHẬT MODEL NÀY ***
 import 'table/user.dart';
 import 'table/home_summary.dart';
-import 'models/schedule.dart'; // Make sure this path is correct
+
+// (VÍ DỤ) Model đơn giản cho Room
+class Room {
+  final int id;
+  final String name;
+  Room({required this.id, required this.name});
+  factory Room.fromJson(Map<String, dynamic> json) {
+    return Room(id: json['id'], name: json['name'] ?? 'N/A');
+  }
+}
+
+// (VÍ DỤ) Model đơn giản cho ClassCourseAssignment
+class ClassCourseAssignment {
+  final int id;
+  final String displayName;
+  // Thêm các trường khác nếu cần để hiển thị hoặc lọc
+  ClassCourseAssignment({required this.id, required this.displayName});
+  factory ClassCourseAssignment.fromJson(Map<String, dynamic> json) {
+    return ClassCourseAssignment(
+        id: json['id'],
+        displayName: json['display_name'] ?? 'N/A'
+    );
+  }
+}
+
 
 class ApiService {
   // --- Singleton Pattern ---
-  // Private constructor
   ApiService._internal();
-  // Static instance
   static final ApiService _instance = ApiService._internal();
-  // Factory constructor to return the static instance
   factory ApiService() {
     return _instance;
   }
   // --- End Singleton Pattern ---
 
   // --- Base URL Configuration ---
-  // Determines the API base URL based on the platform (Web or Mobile Emulator)
   static String get baseUrl {
     if (kIsWeb) {
-      // Use localhost for web builds
       return 'http://localhost:8000/api';
     } else {
-      // Use 10.0.2.2 for Android Emulator to connect to host's localhost
       return 'http://10.0.2.2:8000/api';
-      // Note: For physical devices, replace 10.0.2.2 with your computer's LAN IP.
     }
   }
   // --- End Base URL Configuration ---
 
   // --- Authentication Token ---
-  // Stores the authentication token received after login
   String? _token;
   // --- End Authentication Token ---
 
   // --- Helper for HTTP Headers ---
-  // Creates standard headers for API requests, adding Authorization if needed.
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
-      'Content-Type': 'application/json', // We send JSON
-      'Accept': 'application/json', // We expect JSON response
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
-    // Add the Bearer token if the request requires authentication and the token exists
     if (needsAuth && _token != null) {
       headers['Authorization'] = 'Bearer $_token';
     }
@@ -60,135 +76,209 @@ class ApiService {
   /// ---------------------------------------------------
   /// 👤 Authentication: Login
   /// ---------------------------------------------------
-  /// Attempts to log in the user with email and password.
-  /// Returns the User object on success. Stores the auth token internally.
-  /// Throws an Exception on failure (network error, invalid credentials, inactive account).
   Future<User> login(String email, String password) async {
+    // ... (Giữ nguyên)
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
       final response = await http.post(
         loginUrl,
-        headers: _getHeaders(needsAuth: false), // Login doesn't require prior auth
+        headers: _getHeaders(needsAuth: false),
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      if (response.statusCode == 200) { // HTTP 200 OK
-        final data = jsonDecode(response.body);
+      final String responseBody = utf8.decode(response.bodyBytes);
+      if (response.statusCode == 200) {
+        if(responseBody.isEmpty) {
+          throw Exception('Login successful but no user data received.');
+        }
+        final data = jsonDecode(responseBody);
         final User user = User.fromJson(data['user']);
 
-        // Store the token if provided by the backend
         if (data['token'] != null) {
           _token = data['token'];
           print("Login successful, Token stored!");
         } else {
-          // This indicates a potential backend issue if login succeeds without a token
           print("Warning: Login successful but no token received.");
         }
 
-        // Check if the user account is active before allowing login
         if (user.status == 'active') {
           return user;
         } else {
           throw Exception('❌ Your account has been disabled.');
         }
       } else {
-        // Use the error handler for non-200 responses
         _handleApiError(response, 'Login failed');
       }
     } catch (e) {
-      // Catch network errors or exceptions thrown by _handleApiError
       print("Login Error: $e");
-      if (e is Exception) rethrow; // Keep specific exception messages
-      throw Exception('Could not connect to the server.'); // Generic fallback
+      if (e is Exception) rethrow;
+      throw Exception('Could not connect to the server.');
     }
   }
 
   /// ---------------------------------------------------
   /// 🏠 Home Screen Data (Admin/Teacher)
   /// ---------------------------------------------------
-  /// Fetches summary data for the home screen based on the user ID.
-  /// Requires authentication (sends the stored token).
-  /// Returns a HomeSummary object.
-  /// Throws an Exception on failure.
   Future<HomeSummary> fetchHomeSummary(int userId) async {
+    // ... (Giữ nguyên)
     final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
     try {
-      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
-        // Decode using UTF-8 to handle special characters correctly
-        return HomeSummary.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        final String responseBody = utf8.decode(response.bodyBytes);
+        if(responseBody.isEmpty) {
+          throw Exception('Failed to load home summary: Empty response.');
+        }
+        return HomeSummary.fromJson(jsonDecode(responseBody));
       } else {
         _handleApiError(response, 'Error loading home data');
       }
     } catch (e) {
       print("fetchHomeSummary Error: $e");
-      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
+      rethrow;
     }
   }
 
   /// ---------------------------------------------------
-  /// 🗓️ Schedule Management - Fetch List
+  /// 🗓️ Schedule Management - Fetch List (READ) - ĐÃ SỬA
   /// ---------------------------------------------------
-  /// Fetches the list of all schedules.
-  /// Requires authentication.
-  /// Returns a List of Schedule objects.
-  /// Throws an Exception on failure.
   Future<List<Schedule>> fetchSchedules() async {
     final Uri url = Uri.parse('$baseUrl/schedules');
     try {
-      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
-        // Decode response using UTF-8
-        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        // ScheduleController::index() đã map dữ liệu, nên đây là List trực tiếp
+        final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
 
-        List<dynamic> dataList;
-        // Check if the response is paginated (Laravel standard) or a direct list
-        if (body is Map<String, dynamic> && body.containsKey('data')) {
-          dataList = body['data']; // Extract list from 'data' key
-        } else if (body is List) {
-          dataList = body; // Response is already a list
-        } else {
-          // Unexpected response format
-          throw Exception('Invalid data format received');
-        }
-
-        // Convert the list of JSON maps into a list of Schedule objects
+        // *** QUAN TRỌNG: Model Schedule.fromJson PHẢI được cập nhật ***
+        // để đọc các key tiếng Anh (teacherName, classCode,...)
+        // VÀ các ID (id, room_id, class_course_assignment_id, date, session)
         return dataList.map((item) => Schedule.fromJson(item)).toList();
       } else {
         _handleApiError(response, 'Error loading schedule list');
       }
     } catch (e) {
       print("fetchSchedules Error: $e");
-      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
+      rethrow;
     }
   }
 
-  // ===================================================
-  // Private Helper Methods
-  // ===================================================
+  /// ---------------------------------------------------
+  /// 📚 Fetch Rooms (MỚI)
+  /// ---------------------------------------------------
+  Future<List<Room>> fetchRooms() async {
+    final Uri url = Uri.parse('$baseUrl/rooms');
+    final response = await http.get(url, headers: _getHeaders());
+    if (response.statusCode == 200) {
+      final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
+      return dataList.map((item) => Room.fromJson(item)).toList();
+    } else {
+      _handleApiError(response, 'Error loading rooms');
+    }
+  }
 
   /// ---------------------------------------------------
-  /// ⚙️ General API Error Handler
+  /// 🧑‍🏫 Fetch Class Course Assignments (MỚI)
   /// ---------------------------------------------------
-  /// Parses standard error responses from the API and throws a formatted Exception.
-  /// The return type 'Never' indicates this function *always* throws an exception.
+  Future<List<ClassCourseAssignment>> fetchClassCourseAssignments() async {
+    final Uri url = Uri.parse('$baseUrl/classcourseassignments');
+    final response = await http.get(url, headers: _getHeaders());
+    if (response.statusCode == 200) {
+      final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
+      return dataList.map((item) => ClassCourseAssignment.fromJson(item)).toList();
+    } else {
+      _handleApiError(response, 'Error loading assignments');
+    }
+  }
+
+
+  /// ---------------------------------------------------
+  /// 🗓️ Schedule Management - Create (CREATE) - ĐÃ SỬA
+  /// ---------------------------------------------------
+  Future<void> createSchedule(Map<String, dynamic> scheduleData) async {
+    // scheduleData bây giờ phải chứa ID:
+    // { 'class_course_assignment_id': ..., 'room_id': ..., 'date': 'Y-m-d', 'session': '...' }
+    final Uri url = Uri.parse('$baseUrl/schedules');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(scheduleData), // Gửi map chứa ID
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return; // Tạo thành công
+      } else {
+        _handleApiError(response, 'Error creating schedule');
+      }
+    } catch (e) {
+      print("createSchedule Error: $e");
+      rethrow;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// 🗓️ Schedule Management - Update (UPDATE) - ĐÃ SỬA
+  /// ---------------------------------------------------
+  Future<void> updateSchedule(
+      int scheduleId, Map<String, dynamic> scheduleData) async {
+    // scheduleData cũng phải chứa ID
+    final Uri url = Uri.parse('$baseUrl/schedules/$scheduleId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(scheduleData), // Gửi map chứa ID
+      );
+      if (response.statusCode == 200) {
+        return; // Cập nhật thành công
+      } else {
+        _handleApiError(response, 'Error updating schedule');
+      }
+    } catch (e) {
+      print("updateSchedule Error: $e");
+      rethrow;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// 🗓️ Schedule Management - Delete (DELETE)
+  /// ---------------------------------------------------
+  Future<void> deleteSchedule(int scheduleId) async {
+    // ... (Giữ nguyên)
+    final Uri url = Uri.parse('$baseUrl/schedules/$scheduleId');
+    try {
+      final response = await http.delete(
+        url,
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return; // Xóa thành công
+      } else {
+        _handleApiError(response, 'Error deleting schedule');
+      }
+    } catch (e) {
+      print("deleteSchedule Error: $e");
+      rethrow;
+    }
+  }
+
+  // ... (Giữ nguyên hàm _handleApiError)
   Never _handleApiError(http.Response response, String defaultMessage) {
-    // Log detailed error information for debugging
     print(
         "API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
+    final String responseBody = utf8.decode(response.bodyBytes);
+    if(responseBody.isEmpty) {
+      throw Exception('$defaultMessage (Code: ${response.statusCode})');
+    }
     try {
-      // Attempt to decode the JSON error message from the response body
-      final error = jsonDecode(utf8.decode(response.bodyBytes));
-      // Throw an exception with the message from the API, or a fallback message
+      final error = jsonDecode(responseBody);
       throw Exception(
           error['message'] ?? '$defaultMessage (Code: ${response.statusCode})');
     } catch (e) {
-      // If decoding fails (e.g., non-JSON response) or it's not the expected format
       if (e is FormatException || e is TypeError) {
-        // Throw an exception with the default message and status code
         throw Exception('$defaultMessage (Code: ${response.statusCode})');
       }
-      // If the exception was already parsed successfully (in the 'try' block), rethrow it
       rethrow;
     }
   }

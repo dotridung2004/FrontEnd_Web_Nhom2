@@ -1,9 +1,10 @@
 // lib/api_service.dart
 
-import 'dart:convert'; // <<< SỬA LỖI DUY NHẤT TẠI ĐÂY
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
+// <<< THÊM IMPORT CHO CÁC MODEL BẠN SỬ DỤNG
 import 'table/user.dart';
 import 'table/home_summary.dart';
 import 'models/schedule.dart';
@@ -11,25 +12,25 @@ import 'models/lecturer.dart';
 import 'models/department.dart';
 
 class ApiService {
+  // --- Cấu trúc Singleton để chỉ có 1 instance của ApiService ---
   ApiService._internal();
   static final ApiService _instance = ApiService._internal();
   factory ApiService() {
     return _instance;
   }
 
+  // --- Base URL cho API ---
   static String get baseUrl {
     if (kIsWeb) {
-      // Dùng cho trình duyệt web
       return 'http://localhost:8000/api';
     } else {
-      // Dùng cho máy ảo Android
       return 'http://10.0.2.2:8000/api';
     }
-    // Đối với thiết bị thật, bạn cần thay đổi thành IP của máy tính, vd: 'http://192.168.1.10:8000/api'
   }
 
   String? _token;
 
+  // --- Lấy Headers cho request, có hoặc không có token ---
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -45,6 +46,7 @@ class ApiService {
     _token = token;
   }
 
+  // --- Các hàm API khác của bạn ---
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
@@ -82,6 +84,7 @@ class ApiService {
     }
   }
 
+  // <<< HÀM fetchSchedules ĐÃ ĐƯỢC THÊM VÀO ĐÂY
   Future<List<Schedule>> fetchSchedules() async {
     final Uri url = Uri.parse('$baseUrl/schedules');
     try {
@@ -97,23 +100,7 @@ class ApiService {
     }
   }
 
-  Future<List<Department>> fetchDepartments() async {
-    final Uri url = Uri.parse('$baseUrl/departments');
-    try {
-      final response = await http.get(url, headers: _getHeaders());
-      if (response.statusCode == 200) {
-        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-        List<dynamic> dataList = (body is Map<String, dynamic> && body.containsKey('data')) ? body['data'] : body;
-        return dataList.map((item) => Department.fromJson(item)).toList();
-      } else {
-        _handleApiError(response, 'Lỗi tải danh sách khoa');
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // --- LECTURER API METHODS ---
+  // --- CÁC HÀM API CHO GIẢNG VIÊN (LECTURER) ---
 
   Future<List<Lecturer>> fetchLecturers() async {
     final Uri url = Uri.parse('$baseUrl/lecturers');
@@ -139,7 +126,8 @@ class ApiService {
         body: jsonEncode(lecturerData),
       );
       if (response.statusCode == 201) { // 201 Created
-        return Lecturer.fromJson(jsonDecode(response.body));
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        return Lecturer.fromJson(body);
       } else {
         _handleApiError(response, 'Thêm giảng viên thất bại');
       }
@@ -157,7 +145,8 @@ class ApiService {
         body: jsonEncode(lecturer.toJson()),
       );
       if (response.statusCode == 200) {
-        return Lecturer.fromJson(jsonDecode(response.body));
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        return Lecturer.fromJson(body);
       } else {
         _handleApiError(response, 'Cập nhật giảng viên thất bại');
       }
@@ -170,7 +159,7 @@ class ApiService {
     final Uri url = Uri.parse('$baseUrl/lecturers/$id');
     try {
       final response = await http.delete(url, headers: _getHeaders());
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 204) {
         _handleApiError(response, 'Xóa giảng viên thất bại');
       }
     } catch (e) {
@@ -178,6 +167,8 @@ class ApiService {
     }
   }
 
+
+  // --- Hàm xử lý lỗi chung ---
   Never _handleApiError(http.Response response, String defaultMessage) {
     try {
       final error = jsonDecode(utf8.decode(response.bodyBytes));

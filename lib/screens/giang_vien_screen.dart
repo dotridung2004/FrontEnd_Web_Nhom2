@@ -1,10 +1,10 @@
 // lib/screens/giang_vien_screen.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // <<< IMPORT QUAN TRỌNG NHẤT
 import 'dart:math';
 import 'package:intl/intl.dart';
-import '../api_service.dart';
-import '../models/lecturer.dart';
+import '../api_service.dart';     // <<< THÊM IMPORT
+import '../models/lecturer.dart'; // <<< THÊM IMPORT
 
 class GiangVienScreen extends StatefulWidget {
   const GiangVienScreen({Key? key}) : super(key: key);
@@ -24,6 +24,8 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Lecturer>> _lecturersFuture;
 
+  // Tạm thời giữ danh sách department tĩnh.
+  // Lý tưởng nhất là fetch danh sách này từ API.
   final List<String> _departments = ['Công nghệ thông tin', 'Công trình', 'Cơ khí', 'Kinh tế'];
   String? _selectedDepartment;
   final TextEditingController _searchController = TextEditingController();
@@ -39,13 +41,21 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
   void _loadLecturers() {
-    _lecturersFuture = _apiService.fetchLecturers();
+    setState(() {
+      _lecturersFuture = _apiService.fetchLecturers();
+    });
     _lecturersFuture.then((data) {
       if (mounted) {
         setState(() {
           _allLecturers = data;
           _filteredLecturers = data;
         });
+      }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi tải dữ liệu: $error'), backgroundColor: Colors.red),
+        );
       }
     });
   }
@@ -72,39 +82,51 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
 
   // --- LOGIC CHO THÊM / SỬA / XÓA ---
 
-  void _addLecturer(Lecturer lecturer) {
-    setState(() {
-      _allLecturers.insert(0, lecturer);
-      _filterData();
-    });
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Thêm giảng viên thành công!'), backgroundColor: Colors.green),
+  void _onSaveLecturer(bool isEditing, Lecturer lecturer, String password) async {
+    // Hiển thị loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
     );
-  }
 
-  void _updateLecturer(Lecturer updatedLecturer) {
-    setState(() {
-      final index = _allLecturers.indexWhere((l) => l.id == updatedLecturer.id);
-      if (index != -1) {
-        _allLecturers[index] = updatedLecturer;
-        _filterData();
+    try {
+      if (isEditing) {
+        await _apiService.updateLecturer(lecturer.id, lecturer);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật thông tin thành công!'), backgroundColor: Colors.blue),
+        );
+      } else {
+        final data = lecturer.toJson();
+        data['password'] = password;
+        await _apiService.addLecturer(data);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thêm giảng viên thành công!'), backgroundColor: Colors.green),
+        );
       }
-    });
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cập nhật thông tin thành công!'), backgroundColor: Colors.blue),
-    );
+      Navigator.of(context).pop(); // Tắt loading
+      Navigator.of(context).pop(); // Tắt dialog form
+      _loadLecturers(); // Tải lại dữ liệu
+    } catch (e) {
+      Navigator.of(context).pop(); // Tắt loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
+      );
+    }
   }
 
-  void _deleteLecturer(int id) {
-    setState(() {
-      _allLecturers.removeWhere((lecturer) => lecturer.id == id);
-      _filterData();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Xóa giảng viên thành công!'), backgroundColor: Colors.red),
-    );
+  void _deleteLecturer(int id) async {
+    try {
+      await _apiService.deleteLecturer(id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Xóa giảng viên thành công!'), backgroundColor: Colors.red),
+      );
+      _loadLecturers();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi xóa: ${e.toString()}'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _showDeleteConfirmDialog(Lecturer lecturer) {
@@ -135,7 +157,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
 
   // --- CÁC DIALOG HIỂN THỊ ---
 
-  // Dialog cho Thêm/Sửa
   void _showLecturerFormDialog({Lecturer? lecturer}) {
     final isEditing = lecturer != null;
     final formKey = GlobalKey<FormState>();
@@ -155,152 +176,155 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         final dialogContentBgColor = Color(0xFFF5F5F5);
-
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-          child: SizedBox(
-            width: 800,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  decoration: const BoxDecoration(
-                    color: tluBlue, // <-- THAY ĐỔI MÀU NỀN
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12.0),
-                      topRight: Radius.circular(12.0),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder( // Use StatefulBuilder to manage dropdown state inside dialog
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+              child: SizedBox(
+                width: 800,
+                child: SingleChildScrollView( // Add SingleChildScrollView to prevent overflow
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        isEditing ? 'Sửa thông tin giảng viên' : 'Thêm giảng viên',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), // <-- THAY ĐỔI MÀU CHỮ
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        decoration: const BoxDecoration(
+                          color: tluBlue,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(12.0),
+                            topRight: Radius.circular(12.0),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isEditing ? 'Sửa thông tin giảng viên' : 'Thêm giảng viên',
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ],
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white), // <-- THAY ĐỔI MÀU ICON
-                        onPressed: () => Navigator.of(context).pop(),
+                      Container(
+                        color: dialogContentBgColor,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Form(
+                            key: formKey,
+                            child: Column(
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildTextField(
+                                            label: 'Mã giảng viên',
+                                            controller: codeController,
+                                            hint: 'Nhập mã giảng viên',
+                                            enabled: !isEditing,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _buildTextField(
+                                            label: 'Tên giảng viên',
+                                            controller: nameController,
+                                            hint: 'Nhập tên giảng viên',
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _buildDatePickerField(context, dobController),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 24),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildTextField(
+                                            label: 'Email',
+                                            controller: emailController,
+                                            hint: 'Nhập email',
+                                            keyboardType: TextInputType.emailAddress,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _buildTextField(
+                                            label: 'Số điện thoại',
+                                            controller: phoneController,
+                                            hint: 'Nhập số điện thoại',
+                                            keyboardType: TextInputType.phone,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _buildDepartmentDropdown(
+                                            selectedValue: selectedDepartment,
+                                            onChanged: (value) {
+                                              setDialogState(() { // Update state inside dialog
+                                                selectedDepartment = value;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 32),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                        side: const BorderSide(color: Colors.red),
+                                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      child: const Text('Hủy'),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        if (formKey.currentState!.validate()) {
+                                          final departmentId = _departments.indexOf(selectedDepartment!) + 1;
+
+                                          final newLecturer = Lecturer(
+                                            id: isEditing ? lecturer.id : 0,
+                                            departmentId: departmentId,
+                                            lecturerCode: codeController.text,
+                                            fullName: nameController.text,
+                                            email: emailController.text,
+                                            dob: dobController.text,
+                                            phoneNumber: phoneController.text,
+                                            departmentName: selectedDepartment!,
+                                          );
+
+                                          _onSaveLecturer(isEditing, newLecturer, '123456');
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      child: const Text('Lưu', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // Form content
-                Container(
-                  color: dialogContentBgColor,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    _buildTextField(
-                                      label: 'Mã giảng viên',
-                                      controller: codeController,
-                                      hint: 'Nhập mã giảng viên',
-                                      enabled: !isEditing,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildTextField(
-                                      label: 'Tên giảng viên',
-                                      controller: nameController,
-                                      hint: 'Nhập tên giảng viên',
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildDatePickerField(context, dobController),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 24),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    _buildTextField(
-                                      label: 'Email',
-                                      controller: emailController,
-                                      hint: 'Nhập email',
-                                      keyboardType: TextInputType.emailAddress,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildTextField(
-                                      label: 'Số điện thoại',
-                                      controller: phoneController,
-                                      hint: 'Nhập số điện thoại',
-                                      keyboardType: TextInputType.phone,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildDepartmentDropdown(
-                                      selectedValue: selectedDepartment,
-                                      onChanged: (value) {
-                                        selectedDepartment = value;
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              OutlinedButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Hủy'),
-                              ),
-                              const SizedBox(width: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (formKey.currentState!.validate()) {
-                                    final newLecturer = Lecturer(
-                                      id: isEditing ? lecturer.id : Random().nextInt(10000) + 100,
-                                      departmentId: _departments.indexOf(selectedDepartment!) + 1,
-                                      lecturerCode: codeController.text,
-                                      fullName: nameController.text,
-                                      email: emailController.text,
-                                      dob: dobController.text,
-                                      phoneNumber: phoneController.text,
-                                      departmentName: selectedDepartment!,
-                                    );
-
-                                    if (isEditing) {
-                                      _updateLecturer(newLecturer);
-                                    } else {
-                                      _addLecturer(newLecturer);
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Lưu', style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -318,11 +342,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: const BoxDecoration(
-                    color: tluBlue, // <-- THAY ĐỔI MÀU NỀN
+                    color: tluBlue,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(12.0),
                       topRight: Radius.circular(12.0),
@@ -333,16 +356,15 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                     children: [
                       const Text(
                         'Xem thông tin giảng viên',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), // <-- THAY ĐỔI MÀU CHỮ
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white), // <-- THAY ĐỔI MÀU ICON
+                        icon: const Icon(Icons.close, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
                 ),
-                // Details Content
                 Container(
                   color: const Color(0xFFF5F5F5),
                   padding: const EdgeInsets.all(24.0),
@@ -403,7 +425,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
   // --- CÁC WIDGET HELPER ---
-
+  // (Không có thay đổi trong các widget helper, giữ nguyên code của bạn)
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -446,6 +468,9 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             if (value == null || value.isEmpty) {
               return 'Trường này không được để trống';
             }
+            if (label == 'Email' && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+              return 'Vui lòng nhập email hợp lệ';
+            }
             return null;
           },
         ),
@@ -457,14 +482,9 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600),
-            children: const <TextSpan>[
-              TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
-            ],
-          ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -472,18 +492,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           readOnly: true,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Colors.grey[200],
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
@@ -593,6 +605,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
+
   // --- GIAO DIỆN CHÍNH ---
   @override
   Widget build(BuildContext context) {
@@ -608,13 +621,13 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             FutureBuilder<List<Lecturer>>(
               future: _lecturersFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && _allLecturers.isEmpty) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError && _allLecturers.isEmpty) {
+                if (snapshot.hasError) {
                   return Center(child: Text('Lỗi: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                 }
-                if (_filteredLecturers.isEmpty && snapshot.connectionState == ConnectionState.done) {
+                if (_filteredLecturers.isEmpty) {
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 40.0),

@@ -1,5 +1,7 @@
 // lib/models/lecturer.dart
 
+import 'package:intl/intl.dart'; // <<< THÊM IMPORT NÀY
+
 class Lecturer {
   final int id;
   final String lecturerCode;
@@ -10,6 +12,7 @@ class Lecturer {
   final String departmentName;
   final int departmentId;
 
+  // <<< SỬA LẠI CONSTRUCTOR CHO ĐÚNG CÚ PHÁP
   Lecturer({
     required this.id,
     required this.lecturerCode,
@@ -21,33 +24,40 @@ class Lecturer {
     required this.departmentId,
   });
 
-  // Chuyển đổi từ JSON (nhận từ API) sang Object Lecturer
+
   factory Lecturer.fromJson(Map<String, dynamic> json) {
+    String formattedDob = json['dob'] ?? '';
+    if (json['dob'] != null && json['dob'].isNotEmpty) {
+      try {
+        // API trả về 'YYYY-MM-DD', chuyển thành 'dd/MM/yyyy' để hiển thị
+        final date = DateTime.parse(json['dob']);
+        formattedDob = DateFormat('dd/MM/yyyy').format(date);
+      } catch (e) {
+        // Giữ nguyên nếu định dạng không đúng
+        formattedDob = json['dob'];
+      }
+    }
+
     return Lecturer(
       id: json['id'] ?? 0,
-      lecturerCode: json['user_code'] ?? '', // SỬA LẠI: API trả về 'user_code'
+      lecturerCode: json['user_code'] ?? '',
       fullName: json['name'] ?? 'Không có tên',
       email: json['email'] ?? '',
-      dob: json['dob'], // SỬA LẠI: API trả về 'dob'
+      dob: formattedDob,
       phoneNumber: json['phone_number'],
-      // Giữ nguyên logic xử lý an toàn cho object lồng nhau
       departmentName: json['department']?['name'] ?? 'N/A',
-      // Lấy trực tiếp department_id từ cấp cao nhất
-      departmentId: json['department_id'] ?? 0, // SỬA LẠI: Lấy 'department_id'
+      departmentId: json['department_id'] ?? 0,
     );
   }
 
-  // >>> BỔ SUNG: Chuyển đổi từ Object Lecturer sang JSON (để gửi lên API)
   Map<String, dynamic> toJson() {
     return {
-      'user_code': lecturerCode,
       'name': fullName,
       'email': email,
-      'dob': dob,
-      'phone_number': phoneNumber,
+      'user_code': lecturerCode,
       'department_id': departmentId,
-      // Lưu ý: Mật khẩu sẽ cần được thêm riêng vào map này khi tạo mới giảng viên.
-      // Ví dụ: final data = lecturer.toJson(); data['password'] = '123456';
+      'phone_number': phoneNumber,
+      'dob': dob,
     };
   }
 }

@@ -1,6 +1,4 @@
-// lib/models/lecturer.dart
-
-import 'package:intl/intl.dart'; // <<< THÊM IMPORT NÀY
+import 'package:intl/intl.dart';
 
 class Lecturer {
   final int id;
@@ -12,7 +10,6 @@ class Lecturer {
   final String departmentName;
   final int departmentId;
 
-  // <<< SỬA LẠI CONSTRUCTOR CHO ĐÚNG CÚ PHÁP
   Lecturer({
     required this.id,
     required this.lecturerCode,
@@ -26,15 +23,16 @@ class Lecturer {
 
 
   factory Lecturer.fromJson(Map<String, dynamic> json) {
-    String formattedDob = json['dob'] ?? '';
-    if (json['dob'] != null && json['dob'].isNotEmpty) {
+    // <<< SỬA Ở ĐÂY: Đọc 'date_of_birth' từ JSON
+    String? rawDob = json['date_of_birth'];
+    String formattedDob = '';
+
+    if (rawDob != null && rawDob.isNotEmpty) {
       try {
-        // API trả về 'YYYY-MM-DD', chuyển thành 'dd/MM/yyyy' để hiển thị
-        final date = DateTime.parse(json['dob']);
+        final date = DateTime.parse(rawDob);
         formattedDob = DateFormat('dd/MM/yyyy').format(date);
       } catch (e) {
-        // Giữ nguyên nếu định dạng không đúng
-        formattedDob = json['dob'];
+        formattedDob = rawDob;
       }
     }
 
@@ -43,7 +41,7 @@ class Lecturer {
       lecturerCode: json['user_code'] ?? '',
       fullName: json['name'] ?? 'Không có tên',
       email: json['email'] ?? '',
-      dob: formattedDob,
+      dob: formattedDob.isEmpty ? null : formattedDob, // Gán giá trị đã format
       phoneNumber: json['phone_number'],
       departmentName: json['department']?['name'] ?? 'N/A',
       departmentId: json['department_id'] ?? 0,
@@ -57,7 +55,7 @@ class Lecturer {
       'user_code': lecturerCode,
       'department_id': departmentId,
       'phone_number': phoneNumber,
-      'dob': dob,
+      'date_of_birth': dob, // <<< SỬA Ở ĐÂY: Gửi lên key 'date_of_birth'
     };
   }
 }

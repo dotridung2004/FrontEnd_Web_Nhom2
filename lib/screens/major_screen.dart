@@ -1,35 +1,33 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
-import '../models/department.dart';
+import '../models/major.dart';
 
-class KhoaScreen extends StatefulWidget {
-  const KhoaScreen({Key? key}) : super(key: key);
+class MajorScreen extends StatefulWidget {
+  const MajorScreen({Key? key}) : super(key: key);
 
   @override
-  State<KhoaScreen> createState() => _KhoaScreenState();
+  _MajorScreenState createState() => _MajorScreenState();
 }
 
-class _KhoaScreenState extends State<KhoaScreen> {
-  // Màu sắc
+class _MajorScreenState extends State<MajorScreen> {
   final Color tluBlue = const Color(0xFF005A9C);
   final Color iconView = Colors.blue;
   final Color iconEdit = Colors.green;
   final Color iconDelete = Colors.red;
 
-  // State gọi API
-  late Future<List<Department>> _departmentsFuture;
+  late Future<List<Major>> _majorsFuture;
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    _departmentsFuture = _apiService.fetchDepartments();
+    _majorsFuture = _apiService.fetchMajors();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Department>>(
-      future: _departmentsFuture,
+    return FutureBuilder<List<Major>>(
+      future: _majorsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -43,14 +41,14 @@ class _KhoaScreenState extends State<KhoaScreen> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildContent(context, []); // Bảng rỗng
+          return _buildContent(context, []);
         }
         return _buildContent(context, snapshot.data!);
       },
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Department> departments) {
+  Widget _buildContent(BuildContext context, List<Major> majors) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -64,7 +62,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
               ElevatedButton.icon(
                 onPressed: () { /* TODO: Xử lý Thêm */ },
                 icon: Icon(Icons.add, color: Colors.white, size: 20),
-                label: Text("Thêm khoa", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // Giữ Tiếng Việt
+                label: Text("Thêm ngành học", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // Đổi Tiếng Việt
                 style: ElevatedButton.styleFrom(
                   backgroundColor: tluBlue,
                   padding: const EdgeInsets.symmetric(
@@ -78,7 +76,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
                 width: 300,
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: "Tìm kiếm", // Giữ Tiếng Việt
+                    hintText: "Tìm kiếm", // Đổi Tiếng Việt
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -111,18 +109,18 @@ class _KhoaScreenState extends State<KhoaScreen> {
                     headingRowColor: MaterialStateProperty.all(tluBlue),
                     headingTextStyle: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
-                    // Giữ Tiếng Việt
+                    // Đổi Tiếng Việt
                     columns: const [
                       DataColumn(label: Text('STT')),
-                      DataColumn(label: Text('Mã khoa')),
-                      DataColumn(label: Text('Tên khoa')),
-                      DataColumn(label: Text('Số lượng giảng viên')),
-                      DataColumn(label: Text('Số lượng bộ môn')),
+                      DataColumn(label: Text('Mã ngành')),
+                      DataColumn(label: Text('Tên ngành')),
+                      DataColumn(label: Text('Khoa')),
+                      DataColumn(label: Text('Số lượng GV')),
                       DataColumn(label: Text('Thao tác')),
                     ],
                     rows: List.generate(
-                      departments.length,
-                          (index) => _buildDataRow(index + 1, departments[index]),
+                      majors.length,
+                          (index) => _buildDataRow(index + 1, majors[index]),
                     ),
                   ),
                 ),
@@ -134,19 +132,19 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-  DataRow _buildDataRow(int stt, Department department) {
+  DataRow _buildDataRow(int stt, Major major) {
     return DataRow(
       cells: [
         DataCell(Text(stt.toString())),
-        DataCell(Text(department.code)),
-        DataCell(Text(department.name)),
-        DataCell(Text(department.teacherCount.toString())),
-        DataCell(Text(department.divisionCount.toString())),
+        DataCell(Text(major.code)),
+        DataCell(Text(major.name)),
+        DataCell(Text(major.departmentName)),
+        DataCell(Text(major.teacherCount.toString())),
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Giữ Tiếng Việt
+              // Đổi Tiếng Việt
               IconButton(icon: Icon(Icons.info_outline, color: iconView), onPressed: () { /* View */ }, tooltip: "Xem"),
               IconButton(icon: Icon(Icons.edit_outlined, color: iconEdit), onPressed: () { /* Edit */ }, tooltip: "Sửa"),
               IconButton(icon: Icon(Icons.delete_outline, color: iconDelete), onPressed: () { /* Delete */ }, tooltip: "Xóa"),

@@ -8,8 +8,11 @@ import 'models/registered_course.dart';
 // Import your data models
 import 'table/user.dart';
 import 'table/home_summary.dart';
-import 'models/schedule.dart'; // Make sure this path is correct
-
+import 'models/schedule.dart';
+import 'models/department.dart';
+import 'models/room.dart';
+import 'models/major.dart';
+import 'models/division.dart';
 class ApiService {
   // --- Singleton Pattern ---
   // Private constructor
@@ -268,6 +271,119 @@ class ApiService {
       }
     } catch (e) {
       print("fetchRegisteredCourses Error: $e");
+      rethrow;
+    }
+  }
+  /// ---------------------------------------------------
+  /// 🏛️ Department Management - Fetch List
+  /// ---------------------------------------------------
+  Future<List<Department>> fetchDepartments() async {
+    final Uri url = Uri.parse('$baseUrl/departments'); // 👈 URL API của bạn
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        return dataList.map((item) => Department.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading department list');
+      }
+    } catch (e) {
+      print("fetchDepartments Error: $e");
+      rethrow;
+    }
+  }
+  /// ---------------------------------------------------
+  /// 🚪 Room Management - Fetch List
+  /// ---------------------------------------------------
+  Future<List<Room>> fetchRooms() async {
+    final Uri url = Uri.parse('$baseUrl/rooms'); // 👈 URL API của bạn
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        return dataList.map((item) => Room.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading room list');
+      }
+    } catch (e) {
+      print("fetchRooms Error: $e");
+      rethrow;
+    }
+  }
+  /// 🎓 Major Management - Fetch List
+  /// ---------------------------------------------------
+  Future<List<Major>> fetchMajors() async {
+    final Uri url = Uri.parse('$baseUrl/majors'); // 👈 URL API
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        return dataList.map((item) => Major.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading major list');
+      }
+    } catch (e) {
+      print("fetchMajors Error: $e");
+      rethrow;
+    }
+  }
+
+  // 👇 THÊM HÀM fetchDivisions
+  /// ---------------------------------------------------
+  /// 🔬 Division Management - Fetch List
+  /// ---------------------------------------------------
+  Future<List<Division>> fetchDivisions() async {
+    final Uri url = Uri.parse('$baseUrl/divisions'); // 👈 URL API
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Invalid data format received');
+        }
+
+        return dataList.map((item) => Division.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Error loading division list');
+      }
+    } catch (e) {
+      print("fetchDivisions Error: $e");
       rethrow;
     }
   }

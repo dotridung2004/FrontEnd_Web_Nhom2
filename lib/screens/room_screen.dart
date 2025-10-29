@@ -1,35 +1,33 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
-import '../models/department.dart';
+import '../models/room.dart';
 
-class KhoaScreen extends StatefulWidget {
-  const KhoaScreen({Key? key}) : super(key: key);
+class RoomScreen extends StatefulWidget {
+  const RoomScreen({Key? key}) : super(key: key);
 
   @override
-  State<KhoaScreen> createState() => _KhoaScreenState();
+  _RoomScreenState createState() => _RoomScreenState();
 }
 
-class _KhoaScreenState extends State<KhoaScreen> {
-  // Màu sắc
+class _RoomScreenState extends State<RoomScreen> {
   final Color tluBlue = const Color(0xFF005A9C);
   final Color iconView = Colors.blue;
   final Color iconEdit = Colors.green;
   final Color iconDelete = Colors.red;
 
-  // State gọi API
-  late Future<List<Department>> _departmentsFuture;
+  late Future<List<Room>> _roomsFuture;
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    _departmentsFuture = _apiService.fetchDepartments();
+    _roomsFuture = _apiService.fetchRooms();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Department>>(
-      future: _departmentsFuture,
+    return FutureBuilder<List<Room>>(
+      future: _roomsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -43,14 +41,14 @@ class _KhoaScreenState extends State<KhoaScreen> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildContent(context, []); // Bảng rỗng
+          return _buildContent(context, []);
         }
         return _buildContent(context, snapshot.data!);
       },
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Department> departments) {
+  Widget _buildContent(BuildContext context, List<Room> rooms) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -64,7 +62,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
               ElevatedButton.icon(
                 onPressed: () { /* TODO: Xử lý Thêm */ },
                 icon: Icon(Icons.add, color: Colors.white, size: 20),
-                label: Text("Thêm khoa", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // Giữ Tiếng Việt
+                label: Text("Thêm phòng học", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), // Đổi Tiếng Việt
                 style: ElevatedButton.styleFrom(
                   backgroundColor: tluBlue,
                   padding: const EdgeInsets.symmetric(
@@ -78,7 +76,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
                 width: 300,
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: "Tìm kiếm", // Giữ Tiếng Việt
+                    hintText: "Tìm kiếm", // Đổi Tiếng Việt
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -111,18 +109,20 @@ class _KhoaScreenState extends State<KhoaScreen> {
                     headingRowColor: MaterialStateProperty.all(tluBlue),
                     headingTextStyle: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
-                    // Giữ Tiếng Việt
+                    // Đổi Tiếng Việt
                     columns: const [
                       DataColumn(label: Text('STT')),
-                      DataColumn(label: Text('Mã khoa')),
-                      DataColumn(label: Text('Tên khoa')),
-                      DataColumn(label: Text('Số lượng giảng viên')),
-                      DataColumn(label: Text('Số lượng bộ môn')),
+                      DataColumn(label: Text('Số phòng')),
+                      DataColumn(label: Text('Tòa nhà')),
+                      DataColumn(label: Text('Tầng')),
+                      DataColumn(label: Text('Sức chứa')),
+                      DataColumn(label: Text('Loại phòng')),
+                      DataColumn(label: Text('Trạng thái')),
                       DataColumn(label: Text('Thao tác')),
                     ],
                     rows: List.generate(
-                      departments.length,
-                          (index) => _buildDataRow(index + 1, departments[index]),
+                      rooms.length,
+                          (index) => _buildDataRow(index + 1, rooms[index]),
                     ),
                   ),
                 ),
@@ -134,19 +134,21 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-  DataRow _buildDataRow(int stt, Department department) {
+  DataRow _buildDataRow(int stt, Room room) {
     return DataRow(
       cells: [
         DataCell(Text(stt.toString())),
-        DataCell(Text(department.code)),
-        DataCell(Text(department.name)),
-        DataCell(Text(department.teacherCount.toString())),
-        DataCell(Text(department.divisionCount.toString())),
+        DataCell(Text(room.name)),
+        DataCell(Text(room.building)),
+        DataCell(Text(room.floor.toString())),
+        DataCell(Text(room.capacity.toString())),
+        DataCell(Text(room.type)),
+        DataCell(Text(room.status)),
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Giữ Tiếng Việt
+              // Đổi Tiếng Việt
               IconButton(icon: Icon(Icons.info_outline, color: iconView), onPressed: () { /* View */ }, tooltip: "Xem"),
               IconButton(icon: Icon(Icons.edit_outlined, color: iconEdit), onPressed: () { /* Edit */ }, tooltip: "Sửa"),
               IconButton(icon: Icon(Icons.delete_outline, color: iconDelete), onPressed: () { /* Delete */ }, tooltip: "Xóa"),

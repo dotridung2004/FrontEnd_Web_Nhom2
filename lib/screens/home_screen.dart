@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'login_screen.dart'; // Import để Đăng xuất
 import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
-import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
-import '../screens/lich_hoc_screen.dart'; // 👈 1. THÊM IMPORT NÀY
-import '../screens/hoc_phan_screen.dart'; // 👈 2. THÊM IMPORT HOC PHAN
-import '../screens/lop_hoc_phan_screen.dart'; // 👈 3. THÊM IMPORT LOP HOC PHAN
+import '../table/user.dart';
+import '../screens/lich_hoc_screen.dart';
+import '../screens/hoc_phan_screen.dart';
+import '../screens/lop_hoc_phan_screen.dart';
 import '../screens/registered_course_screen.dart';
+
+// Import vẫn giữ tên file tiếng Anh
+import '../screens/room_screen.dart';
+import '../screens/major_screen.dart';
+import '../screens/division_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -24,10 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color screenBg = Color(0xFFF0F4F8);
   final Color logoutRed = Color(0xFFD32F2F);
 
-  // State Management
+  // State Management (Đổi về Tiếng Việt)
   late Widget _selectedContent;
-  String _selectedTitle = "Trang chủ";
-  String _selectedMenuKey = "TRANG_CHU";
+  String _selectedTitle = "Trang chủ"; // 👈 SỬA
+  String _selectedMenuKey = "TRANG_CHU"; // 👈 SỬA
 
   @override
   void initState() {
@@ -49,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatRole(String role) {
+    // 👈 SỬA (Đổi về Tiếng Việt)
     switch (role) {
       case 'training_office': return 'Phòng Đào tạo';
       case 'teacher': return 'Giảng viên';
@@ -96,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 👈 SỬA (Cập nhật lại menu Tiếng Việt)
   Widget _buildSideMenu() {
     return Container(
       width: 250,
@@ -131,13 +138,20 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => _onMenuItemSelected("TRANG_CHU", "Trang chủ", DashboardContent(user: widget.user)),
           ),
           _buildExpansionMenuItem("DANH MỤC", "DANH_MUC", children: [
-            _buildMenuItem("Khoa", "KHOA", onTap: () => _onMenuItemSelected("KHOA", "Khoa", const KhoaScreen())),
-            _buildMenuItem("Bộ môn", "BO_MON", onTap: () { /* TODO */ }),
-            _buildMenuItem("Ngành học", "NGANH_HOC", onTap: () { /* TODO */ }),
-            _buildMenuItem("Phòng học", "PHONG_HOC", onTap: () { /* TODO */ }),
+            _buildMenuItem("Khoa", "KHOA",
+                onTap: () => _onMenuItemSelected("KHOA", "Khoa", const KhoaScreen())
+            ),
+            _buildMenuItem("Bộ môn", "BO_MON",
+                onTap: () => _onMenuItemSelected("BO_MON", "Bộ môn", const DivisionScreen()) // 👈 Vẫn dùng DivisionScreen
+            ),
+            _buildMenuItem("Ngành học", "NGANH_HOC",
+                onTap: () => _onMenuItemSelected("NGANH_HOC", "Ngành học", const MajorScreen()) // 👈 Vẫn dùng MajorScreen
+            ),
+            _buildMenuItem("Phòng học", "PHONG_HOC",
+                onTap: () => _onMenuItemSelected("PHONG_HOC", "Phòng học", const RoomScreen()) // 👈 Vẫn dùng RoomScreen
+            ),
           ]),
 
-          // --- 👇 CẬP NHẬT MỤC HỌC PHẦN ---
           _buildExpansionMenuItem("HỌC PHẦN", "HOC_PHAN", children: [
             _buildMenuItem(
               "Học phần",
@@ -145,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onMenuItemSelected(
                   "HP",
                   "Học phần",
-                  const HocPhanScreen() // <-- LIÊN KẾT ĐẾN HOCPHANSCREEN
+                  const HocPhanScreen()
               ),
             ),
             _buildMenuItem(
@@ -154,21 +168,19 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onMenuItemSelected(
                   "LHP",
                   "Lớp học phần",
-                  const LopHocPhanScreen() // <-- LIÊN KẾT ĐẾN LOPHOCPHANSCREEN
+                  const LopHocPhanScreen()
               ),
             ),
-            // 👇 SỬA DÒNG NÀY
             _buildMenuItem(
                 "Học phần đã đăng ký",
                 "HP_DK",
                 onTap: () => _onMenuItemSelected(
                     "HP_DK",
                     "Học phần đã đăng ký",
-                    const RegisteredCourseScreen() // <-- LIÊN KẾT ĐẾN REGISTEREDCOURSESCREEN
+                    const RegisteredCourseScreen()
                 )
             ),
           ]),
-          // --- 👆 KẾT THÚC CẬP NHẬT ---
 
           _buildMenuItem("GIẢNG VIÊN", "GIANG_VIEN", onTap: () { /* TODO */ }),
 
@@ -178,13 +190,13 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => _onMenuItemSelected(
               "LICH_HOC",
               "Lịch học",
-              const LichHocScreen(), // <--- LIÊN KẾT ĐẾN LichHocScreen
+              const LichHocScreen(),
             ),
           ),
 
           _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
           _buildMenuDivider(),
-          _buildMenuItem("TÀI KHOẢN", "TAI_KOAN", onTap: () { /* TODO */ }),
+          _buildMenuItem("TÀI KHOẢN", "TAI_KHOAN", onTap: () { /* TODO */ }),
         ],
       ),
     );
@@ -197,6 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
       elevation: 1.0,
       shadowColor: Colors.black.withOpacity(0.1),
       leading: isMobile ? Builder(builder: (context) => IconButton(icon: Icon(Icons.menu, color: Colors.black87), onPressed: () => Scaffold.of(context).openDrawer())) : null,
+      // 👈 SỬA (Đổi "Home" -> "Trang chủ")
       title: (isMobile || title != "Trang chủ") ? Text(title, style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)) : null,
       actions: [
         // Notification Icon
@@ -219,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // Logout Button
         Padding( /* ... Logout ... */
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+          // 👈 SỬA (Đổi "Logout" -> "Đăng xuất")
           child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen())), style: ElevatedButton.styleFrom(backgroundColor: logoutRed, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))), child: Text("Đăng xuất")),
         ),
       ],

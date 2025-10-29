@@ -3,7 +3,8 @@ import 'login_screen.dart'; // Import để Đăng xuất
 import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
 import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
-import '../screens/lich_hoc_screen.dart'; // 👈 1. THÊM IMPORT NÀY
+import '../screens/lich_hoc_screen.dart';
+import '../screens/giang_vien_screen.dart'; // 👈 1. IMPORT MÀN HÌNH MỚI
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -138,19 +139,28 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMenuItem("Lớp học phần", "LHP", onTap: () { /* TODO */ }),
             _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
           ]),
-          _buildMenuItem("GIẢNG VIÊN", "GIANG_VIEN", onTap: () { /* TODO */ }),
 
-          // --- 👇 2. CẬP NHẬT onTAP CHO LỊCH HỌC ---
+          // --- 👇 2. CẬP NHẬT MỤC "GIẢNG VIÊN" ---
+          _buildMenuItem(
+            "GIẢNG VIÊN",
+            "GIANG_VIEN",
+            onTap: () => _onMenuItemSelected(
+              "GIANG_VIEN",
+              "Giảng viên",
+              const GiangVienScreen(), // <-- Dùng widget mới
+            ),
+          ),
+          // --- 👆 KẾT THÚC CẬP NHẬT ---
+
           _buildMenuItem(
             "LỊCH HỌC",
             "LICH_HOC",
             onTap: () => _onMenuItemSelected(
               "LICH_HOC",
               "Lịch học",
-              const LichHocScreen(), // <--- LIÊN KẾT ĐẾN LichHocScreen
+              const LichHocScreen(),
             ),
           ),
-          // --- 👆 KẾT THÚC CẬP NHẬT ---
 
           _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
           _buildMenuDivider(),

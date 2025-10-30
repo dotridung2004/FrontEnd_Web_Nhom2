@@ -2,10 +2,10 @@ import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
 
-import 'models/course.dart'; // 👈 THÊM DÒNG NÀY
+// Import các model hiện có
+import 'models/course.dart';
 import 'models/class_course.dart';
 import 'models/registered_course.dart';
-// Import your data models
 import 'table/user.dart';
 import 'table/home_summary.dart';
 import 'models/schedule.dart';
@@ -13,242 +13,203 @@ import 'models/department.dart';
 import 'models/room.dart';
 import 'models/major.dart';
 import 'models/division.dart';
+import 'models/division_detail.dart';
+
+// 👇 TẠO 1 CLASS MỚI ĐỂ CHỨA KẾT QUẢ PHÂN TRANG
+class PaginatedDivisions {
+  final List<Division> divisions;
+  final int totalItems;
+  final int currentPage;
+  final int lastPage;
+
+  PaginatedDivisions({
+    required this.divisions,
+    required this.totalItems,
+    required this.currentPage,
+    required this.lastPage,
+  });
+
+  factory PaginatedDivisions.fromJson(Map<String, dynamic> json) {
+    List<Division> divisionsList = [];
+    if (json['data'] != null && json['data'] is List) {
+      divisionsList = (json['data'] as List)
+          .map((item) => Division.fromJson(item)) // Đảm bảo Division.fromJson khớp
+          .toList();
+    }
+
+    return PaginatedDivisions(
+      divisions: divisionsList,
+      // Đọc metadata từ Laravel pagination
+      totalItems: json['total'] ?? 0,
+      currentPage: json['current_page'] ?? 1,
+      lastPage: json['last_page'] ?? 1,
+    );
+  }
+}
+// 👆 KẾT THÚC CLASS MỚI
+
+
 class ApiService {
   // --- Singleton Pattern ---
-  // Private constructor
   ApiService._internal();
-  // Static instance
   static final ApiService _instance = ApiService._internal();
-  // Factory constructor to return the static instance
   factory ApiService() {
     return _instance;
   }
   // --- End Singleton Pattern ---
 
   // --- Base URL Configuration ---
-  // Determines the API base URL based on the platform (Web or Mobile Emulator)
   static String get baseUrl {
     if (kIsWeb) {
-      // Use localhost for web builds
+      // Dùng localhost cho web
       return 'http://localhost:8000/api';
     } else {
-      // Use 10.0.2.2 for Android Emulator to connect to host's localhost
+      // Dùng 10.0.2.2 cho Android Emulator
       return 'http://10.0.2.2:8000/api';
-      // Note: For physical devices, replace 10.0.2.2 with your computer's LAN IP.
     }
   }
   // --- End Base URL Configuration ---
 
-  // --- Authentication Token ---
-  // Stores the authentication token received after login
-  String? _token;
-  // --- End Authentication Token ---
+  String? _token; // Lưu token xác thực
 
-  // --- Helper for HTTP Headers ---
-  // Creates standard headers for API requests, adding Authorization if needed.
+  // Helper tạo header cho request
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
-      'Content-Type': 'application/json', // We send JSON
-      'Accept': 'application/json', // We expect JSON response
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
-    // Add the Bearer token if the request requires authentication and the token exists
     if (needsAuth && _token != null) {
       headers['Authorization'] = 'Bearer $_token';
     }
     return headers;
   }
-  // --- End Helper for HTTP Headers ---
 
   // ===================================================
-  // API Methods
+  // Các hàm API hiện có (login, fetchHomeSummary, etc.)
   // ===================================================
-
-  /// ---------------------------------------------------
-  /// 👤 Authentication: Login
-  /// ---------------------------------------------------
-  /// Attempts to log in the user with email and password.
-  /// Returns the User object on success. Stores the auth token internally.
-  /// Throws an Exception on failure (network error, invalid credentials, inactive account).
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
       final response = await http.post(
         loginUrl,
-        headers: _getHeaders(needsAuth: false), // Login doesn't require prior auth
+        headers: _getHeaders(needsAuth: false),
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      if (response.statusCode == 200) { // HTTP 200 OK
+      if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final User user = User.fromJson(data['user']);
 
-        // Store the token if provided by the backend
         if (data['token'] != null) {
           _token = data['token'];
-          print("Login successful, Token stored!");
+          print("Đăng nhập thành công, Token đã lưu!");
         } else {
-          // This indicates a potential backend issue if login succeeds without a token
-          print("Warning: Login successful but no token received.");
+          print("Cảnh báo: Đăng nhập thành công nhưng không nhận được token.");
         }
 
-        // Check if the user account is active before allowing login
         if (user.status == 'active') {
           return user;
         } else {
-          throw Exception('❌ Your account has been disabled.');
+          throw Exception('❌ Tài khoản của bạn đã bị vô hiệu hóa.');
         }
       } else {
-        // Use the error handler for non-200 responses
-        _handleApiError(response, 'Login failed');
+        _handleApiError(response, 'Đăng nhập thất bại');
       }
     } catch (e) {
-      // Catch network errors or exceptions thrown by _handleApiError
-      print("Login Error: $e");
-      if (e is Exception) rethrow; // Keep specific exception messages
-      throw Exception('Could not connect to the server.'); // Generic fallback
+      print("Lỗi đăng nhập: $e");
+      if (e is Exception) rethrow;
+      throw Exception('Không thể kết nối đến máy chủ.');
     }
   }
 
-  /// ---------------------------------------------------
-  /// 🏠 Home Screen Data (Admin/Teacher)
-  /// ---------------------------------------------------
-  /// Fetches summary data for the home screen based on the user ID.
-  /// Requires authentication (sends the stored token).
-  /// Returns a HomeSummary object.
-  /// Throws an Exception on failure.
   Future<HomeSummary> fetchHomeSummary(int userId) async {
     final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
     try {
-      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
-        // Decode using UTF-8 to handle special characters correctly
         return HomeSummary.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
-        _handleApiError(response, 'Error loading home data');
+        _handleApiError(response, 'Lỗi tải dữ liệu trang chủ');
       }
     } catch (e) {
-      print("fetchHomeSummary Error: $e");
-      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
+      print("fetchHomeSummary Lỗi: $e");
+      rethrow;
     }
   }
 
-  /// ---------------------------------------------------
-  /// 🗓️ Schedule Management - Fetch List
-  /// ---------------------------------------------------
-  /// Fetches the list of all schedules.
-  /// Requires authentication.
-  /// Returns a List of Schedule objects.
-  /// Throws an Exception on failure.
   Future<List<Schedule>> fetchSchedules() async {
     final Uri url = Uri.parse('$baseUrl/schedules');
     try {
-      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
+      final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
-        // Decode response using UTF-8
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-
-        List<dynamic> dataList;
-        // Check if the response is paginated (Laravel standard) or a direct list
-        if (body is Map<String, dynamic> && body.containsKey('data')) {
-          dataList = body['data']; // Extract list from 'data' key
-        } else if (body is List) {
-          dataList = body; // Response is already a list
-        } else {
-          // Unexpected response format
-          throw Exception('Invalid data format received');
-        }
-
-        // Convert the list of JSON maps into a list of Schedule objects
-        return dataList.map((item) => Schedule.fromJson(item)).toList();
-      } else {
-        _handleApiError(response, 'Error loading schedule list');
-      }
-    } catch (e) {
-      print("fetchSchedules Error: $e");
-      rethrow; // Allow the UI (e.g., FutureBuilder) to handle the error
-    }
-  }
-
-// ... (sau hàm fetchSchedules) ...
-
-  /// ---------------------------------------------------
-  /// 📚 Course Management - Fetch List
-  /// ---------------------------------------------------
-  /// Fetches the list of all courses.
-  /// Requires authentication.
-  /// Returns a List of Course objects.
-  /// Throws an Exception on failure.
-  Future<List<Course>> fetchCourses() async {
-    final Uri url = Uri.parse('$baseUrl/courses'); // 👈 THAY ĐỔI URL
-    try {
-      final response = await http.get(url, headers: _getHeaders()); // Authenticated request
-      if (response.statusCode == 200) {
-        // Decode response using UTF-8
-        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-
         List<dynamic> dataList;
         if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else if (body is List) {
           dataList = body;
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
-        // 👇 THAY ĐỔI: Parse sang Course
-        return dataList.map((item) => Course.fromJson(item)).toList();
+        return dataList.map((item) => Schedule.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading course list');
+        _handleApiError(response, 'Lỗi tải danh sách lịch học');
       }
     } catch (e) {
-      print("fetchCourses Error: $e");
+      print("fetchSchedules Lỗi: $e");
       rethrow;
     }
   }
-  // ... (sau hàm fetchCourses) ...
 
-  /// ---------------------------------------------------
-  /// 🏫 Class Course Management - Fetch List
-  /// ---------------------------------------------------
-  /// Fetches the list of all class-courses.
-  /// Requires authentication.
-  /// Returns a List of ClassCourse objects.
-  /// Throws an Exception on failure.
+  Future<List<Course>> fetchCourses() async {
+    final Uri url = Uri.parse('$baseUrl/courses');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList;
+        if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else if (body is List) {
+          dataList = body;
+        } else {
+          throw Exception('Định dạng dữ liệu không hợp lệ');
+        }
+        return dataList.map((item) => Course.fromJson(item)).toList();
+      } else {
+        _handleApiError(response, 'Lỗi tải danh sách học phần');
+      }
+    } catch (e) {
+      print("fetchCourses Lỗi: $e");
+      rethrow;
+    }
+  }
+
   Future<List<ClassCourse>> fetchClassCourses() async {
-    // 👈 THAY ĐỔI URL
     final Uri url = Uri.parse('$baseUrl/class-courses');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-
         List<dynamic> dataList;
         if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else if (body is List) {
           dataList = body;
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
-        // 👇 THAY ĐỔI: Parse sang ClassCourse
         return dataList.map((item) => ClassCourse.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading class-course list');
+        _handleApiError(response, 'Lỗi tải danh sách lớp học phần');
       }
     } catch (e) {
-      print("fetchClassCourses Error: $e");
+      print("fetchClassCourses Lỗi: $e");
       rethrow;
     }
   }
-// ... (Bên dưới hàm fetchClassCourses()) ...
 
-  /// ---------------------------------------------------
-  /// 📊 Registered Courses Summary - Fetch List
-  /// ---------------------------------------------------
-  /// Fetches class-courses with student count.
   Future<List<RegisteredCourse>> fetchRegisteredCourses() async {
-    // 👈 URL phải khớp với route bạn tạo trong api.php
     final Uri url = Uri.parse('$baseUrl/registered-courses');
     try {
       final response = await http.get(url, headers: _getHeaders());
@@ -261,159 +222,222 @@ class ApiService {
         } else if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
-        // 👇 Parse sang model RegisteredCourse
         return dataList.map((item) => RegisteredCourse.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading registered course list');
+        _handleApiError(response, 'Lỗi tải danh sách lớp đã đăng ký');
       }
     } catch (e) {
-      print("fetchRegisteredCourses Error: $e");
+      print("fetchRegisteredCourses Lỗi: $e");
       rethrow;
     }
   }
-  /// ---------------------------------------------------
-  /// 🏛️ Department Management - Fetch List
-  /// ---------------------------------------------------
+
   Future<List<Department>> fetchDepartments() async {
-    final Uri url = Uri.parse('$baseUrl/departments'); // 👈 URL API của bạn
+    final Uri url = Uri.parse('$baseUrl/departments');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
         List<dynamic> dataList;
-
         if (body is List) {
           dataList = body;
         } else if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
         return dataList.map((item) => Department.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading department list');
+        _handleApiError(response, 'Lỗi tải danh sách khoa');
       }
     } catch (e) {
-      print("fetchDepartments Error: $e");
+      print("fetchDepartments Lỗi: $e");
       rethrow;
     }
   }
-  /// ---------------------------------------------------
-  /// 🚪 Room Management - Fetch List
-  /// ---------------------------------------------------
+
   Future<List<Room>> fetchRooms() async {
-    final Uri url = Uri.parse('$baseUrl/rooms'); // 👈 URL API của bạn
+    final Uri url = Uri.parse('$baseUrl/rooms');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
         List<dynamic> dataList;
-
         if (body is List) {
           dataList = body;
         } else if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
         return dataList.map((item) => Room.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading room list');
+        _handleApiError(response, 'Lỗi tải danh sách phòng học');
       }
     } catch (e) {
-      print("fetchRooms Error: $e");
+      print("fetchRooms Lỗi: $e");
       rethrow;
     }
   }
-  /// 🎓 Major Management - Fetch List
-  /// ---------------------------------------------------
+
   Future<List<Major>> fetchMajors() async {
-    final Uri url = Uri.parse('$baseUrl/majors'); // 👈 URL API
+    final Uri url = Uri.parse('$baseUrl/majors');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
         List<dynamic> dataList;
-
         if (body is List) {
           dataList = body;
         } else if (body is Map<String, dynamic> && body.containsKey('data')) {
           dataList = body['data'];
         } else {
-          throw Exception('Invalid data format received');
+          throw Exception('Định dạng dữ liệu không hợp lệ');
         }
-
         return dataList.map((item) => Major.fromJson(item)).toList();
       } else {
-        _handleApiError(response, 'Error loading major list');
+        _handleApiError(response, 'Lỗi tải danh sách ngành học');
       }
     } catch (e) {
-      print("fetchMajors Error: $e");
+      print("fetchMajors Lỗi: $e");
       rethrow;
     }
   }
 
-  // 👇 THÊM HÀM fetchDivisions
+  // 👇 **** BẮT ĐẦU SỬA ĐỔI fetchDivisions **** 👇
   /// ---------------------------------------------------
-  /// 🔬 Division Management - Fetch List
+  /// 🔬 Division Management - Fetch List (CÓ PHÂN TRANG & TÌM KIẾM)
   /// ---------------------------------------------------
-  Future<List<Division>> fetchDivisions() async {
-    final Uri url = Uri.parse('$baseUrl/divisions'); // 👈 URL API
+  Future<PaginatedDivisions> fetchDivisions({int page = 1, String query = ''}) async {
+    // Xây dựng URL với tham số page và search (đã encode)
+    final Uri url = Uri.parse('$baseUrl/divisions?page=$page&search=${Uri.encodeComponent(query)}');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-        List<dynamic> dataList;
 
-        if (body is List) {
-          dataList = body;
-        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
-          dataList = body['data'];
-        } else {
-          throw Exception('Invalid data format received');
-        }
-
-        return dataList.map((item) => Division.fromJson(item)).toList();
+        // Trả về đối tượng PaginatedDivisions
+        return PaginatedDivisions.fromJson(body);
       } else {
-        _handleApiError(response, 'Error loading division list');
+        _handleApiError(response, 'Lỗi tải danh sách bộ môn');
       }
     } catch (e) {
-      print("fetchDivisions Error: $e");
+      print("fetchDivisions Lỗi: $e");
+      if (e is Exception) rethrow;
+      throw Exception('Không thể kết nối đến máy chủ.');
+    }
+  }
+  // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
+
+  // ===================================================
+  // 👇 CRUD BỘ MÔN (DIVISION) 👇
+  // ===================================================
+
+  /// ---------------------------------------------------
+  /// 🔬 Division Management - Fetch Details
+  /// ---------------------------------------------------
+  Future<DivisionDetail> fetchDivisionDetails(int divisionId) async {
+    final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return DivisionDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tải chi tiết bộ môn');
+      }
+    } catch (e) {
+      print("fetchDivisionDetails Lỗi: $e");
       rethrow;
     }
   }
+
+  /// ---------------------------------------------------
+  /// 🔬 Division Management - Create
+  /// ---------------------------------------------------
+  Future<Division> createDivision(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/divisions');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 201) { // 201 Created
+        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+        // Backend (hàm store) đã map sẵn dữ liệu, nên parse trực tiếp
+        return Division.fromJson(responseData);
+      } else {
+        _handleApiError(response, 'Lỗi tạo bộ môn');
+      }
+    } catch (e) {
+      print("createDivision Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// 🔬 Division Management - Update
+  /// ---------------------------------------------------
+  Future<Division> updateDivision(int divisionId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) { // 200 OK
+        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+        // Backend (hàm update) đã map sẵn dữ liệu
+        return Division.fromJson(responseData);
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật bộ môn');
+      }
+    } catch (e) {
+      print("updateDivision Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// 🔬 Division Management - Delete
+  /// ---------------------------------------------------
+  Future<void> deleteDivision(int divisionId) async {
+    final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      } else {
+        _handleApiError(response, 'Lỗi xóa bộ môn');
+      }
+    } catch (e) {
+      print("deleteDivision Lỗi: $e");
+      rethrow;
+    }
+  }
+
   // ===================================================
   // Private Helper Methods
   // ===================================================
-
-  /// ---------------------------------------------------
-  /// ⚙️ General API Error Handler
-  /// ---------------------------------------------------
-  /// Parses standard error responses from the API and throws a formatted Exception.
-  /// The return type 'Never' indicates this function *always* throws an exception.
   Never _handleApiError(http.Response response, String defaultMessage) {
-    // Log detailed error information for debugging
     print(
-        "API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
+        "Lỗi API (${response.request?.url}): ${response.statusCode} - ${response.body}");
     try {
-      // Attempt to decode the JSON error message from the response body
-      final error = jsonDecode(utf8.decode(response.bodyBytes));
-      // Throw an exception with the message from the API, or a fallback message
-      throw Exception(
-          error['message'] ?? '$defaultMessage (Code: ${response.statusCode})');
-    } catch (e) {
-      // If decoding fails (e.g., non-JSON response) or it's not the expected format
-      if (e is FormatException || e is TypeError) {
-        // Throw an exception with the default message and status code
-        throw Exception('$defaultMessage (Code: ${response.statusCode})');
+      final errorBody = utf8.decode(response.bodyBytes);
+      if (errorBody.isEmpty) {
+        throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode})');
       }
-      // If the exception was already parsed successfully (in the 'try' block), rethrow it
+      final error = jsonDecode(errorBody);
+      throw Exception(
+          error['message'] ?? '$defaultMessage (Mã lỗi: ${response.statusCode})');
+    } catch (e) {
+      if (e is FormatException || e is TypeError || e is Exception) {
+        throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode}) - Phản hồi: ${utf8.decode(response.bodyBytes)}');
+      }
       rethrow;
     }
   }
-}
+} // End of ApiService class

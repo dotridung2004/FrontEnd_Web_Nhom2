@@ -801,7 +801,7 @@ class _DivisionScreenState extends State<DivisionScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: confirmColor, foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                     ),
                   ),
                 ],

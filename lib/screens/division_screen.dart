@@ -521,10 +521,15 @@ class _DivisionScreenState extends State<DivisionScreen> {
             await _apiService.createDivision(data);
           }
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEdit ? 'Cập nhật thành công!' : 'Thêm thành công!')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isEdit ? 'Cập nhật bộ môn thành công!' : 'Thêm bộ môn thành công!'),
+              backgroundColor: Colors.green, // <-- Thêm dòng này
+            ),
+          );
           Navigator.of(context).pop();
           _refreshDivisionList(goToFirstPage: !isEdit); // Về trang 1 nếu Thêm mới
-        } catch (e) {
+        }catch (e) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
           onSavingStateChange();
@@ -785,7 +790,10 @@ class _DivisionScreenState extends State<DivisionScreen> {
                         await _apiService.deleteDivision(division.id);
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Xóa bộ môn thành công!')),
+                          SnackBar(
+                            content: Text('Xóa bộ môn thành công!'),
+                            backgroundColor: Colors.green, // Đảm bảo bạn gõ đúng 'backgroundColor'
+                          ),
                         );
                         Navigator.of(context).pop();
                         _refreshDivisionList(goToFirstPage: true); // Về trang 1 sau khi xóa

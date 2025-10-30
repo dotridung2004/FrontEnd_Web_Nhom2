@@ -418,7 +418,67 @@ class ApiService {
       rethrow;
     }
   }
+  /// ---------------------------------------------------
+  /// 🔬 Department Management - Create
+  /// ---------------------------------------------------
+  Future<Department> createDepartment(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/departments');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 201) { // 201 Created
+        return Department.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tạo khoa');
+      }
+    } catch (e) {
+      print("createDepartment Lỗi: $e");
+      rethrow;
+    }
+  }
 
+  /// ---------------------------------------------------
+  /// 🔬 Department Management - Update
+  /// ---------------------------------------------------
+  Future<Department> updateDepartment(int departmentId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/departments/$departmentId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) { // 200 OK
+        return Department.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật khoa');
+      }
+    } catch (e) {
+      print("updateDepartment Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// 🔬 Department Management - Delete
+  /// ---------------------------------------------------
+  Future<void> deleteDepartment(int departmentId) async {
+    final Uri url = Uri.parse('$baseUrl/departments/$departmentId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) { // 204 No Content
+        return;
+      } else {
+        _handleApiError(response, 'Lỗi xóa khoa');
+      }
+    } catch (e) {
+      print("deleteDepartment Lỗi: $e");
+      rethrow;
+    }
+  }
   // ===================================================
   // Private Helper Methods
   // ===================================================

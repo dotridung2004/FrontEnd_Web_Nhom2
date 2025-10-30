@@ -9,6 +9,13 @@ class Department {
   final int id;
   final String code; // Mã khoa (CNTT)
   final String name; // Tên khoa (Công nghệ thông tin)
+
+  // 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
+  // Thêm headId để khớp với database
+  // Xóa description vì database không có
+  final int? headId;
+  // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
+
   final int teacherCount; // Số lượng giảng viên
   final int divisionCount; // Số lượng bộ môn
 
@@ -16,6 +23,7 @@ class Department {
     required this.id,
     required this.code,
     required this.name,
+    this.headId,        // Cập nhật
     required this.teacherCount,
     required this.divisionCount,
   });
@@ -23,10 +31,14 @@ class Department {
   factory Department.fromJson(Map<String, dynamic> json) {
     return Department(
       id: json['id'] ?? 0,
-      code: json['code'] ?? 'N/A', // Giả định backend trả về 'code'
-      name: json['name'] ?? 'N/A', // Giả định backend trả về 'name'
-      // Giả định backend trả về 'teachers_count' và 'divisions_count'
-      // (Thường được thêm bằng withCount() trong Laravel)
+      code: json['code'] ?? 'N/A',
+      name: json['name'] ?? 'N/A',
+
+      // 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
+      // Đọc head_id từ JSON (nếu có)
+      headId: (json['head_id'] as num?)?.toInt(), // Sẽ là null nếu JSON không có
+      // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
+
       teacherCount: (json['teachers_count'] as num?)?.toInt() ?? 0,
       divisionCount: (json['divisions_count'] as num?)?.toInt() ?? 0,
     );

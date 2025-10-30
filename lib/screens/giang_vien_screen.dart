@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
 import '../api_service.dart';
-import '../models/lecturer.dart'; // <<< Đảm bảo model Lecturer đã được sửa (không có lecturerCode)
+import '../models/lecturer.dart';
 
 class GiangVienScreen extends StatefulWidget {
   const GiangVienScreen({Key? key}) : super(key: key);
@@ -29,6 +29,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   List<Lecturer> _allLecturers = [];
   List<Lecturer> _filteredLecturers = [];
 
+  // --- State cho phân trang ---
+  int _currentPage = 1;
+  final int _rowsPerPage = 10;
+
   @override
   void initState() {
     super.initState();
@@ -42,9 +46,12 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     });
     _lecturersFuture.then((data) {
       if (mounted) {
+        // Sắp xếp danh sách để mục mới nhất (ID cao nhất) lên đầu
+        data.sort((a, b) => b.id.compareTo(a.id));
+
         setState(() {
           _allLecturers = data;
-          _filteredLecturers = data;
+          _filterData(); // Áp dụng bộ lọc để cập nhật UI
         });
       }
     }).catchError((error) {
@@ -65,6 +72,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             lecturer.email.toLowerCase().contains(query);
         return departmentMatch && searchMatch;
       }).toList();
+      _currentPage = 1; // Reset về trang 1 mỗi khi lọc
     });
   }
 
@@ -98,11 +106,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           const SnackBar(content: Text('Thêm giảng viên thành công!'), backgroundColor: Colors.green),
         );
       }
-      Navigator.of(context).pop();
-      Navigator.of(context).pop();
-      _loadLecturers();
+      Navigator.of(context).pop(); // Đóng dialog loading
+      Navigator.of(context).pop(); // Đóng dialog form
+      _loadLecturers(); // Tải lại dữ liệu để thấy thay đổi và sắp xếp
     } catch (e) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(); // Đóng dialog loading
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
       );
@@ -115,7 +123,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Xóa giảng viên thành công!'), backgroundColor: Colors.red),
       );
-      _loadLecturers();
+      _loadLecturers(); // Tải lại dữ liệu sau khi xóa
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi khi xóa: ${e.toString()}'), backgroundColor: Colors.red),
@@ -149,18 +157,19 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
+
   // --- CÁC DIALOG HIỂN THỊ ---
 
   void _showLecturerFormDialog({Lecturer? lecturer}) {
     final isEditing = lecturer != null;
     final formKey = GlobalKey<FormState>();
 
-    final nameController = TextEditingController(text: isEditing ? lecturer!.fullName : ''); // Sử dụng lecturer! để khẳng định không null khi isEditing=true
-    final dobController = TextEditingController(text: isEditing ? lecturer!.dob : '');
-    final emailController = TextEditingController(text: isEditing ? lecturer!.email : '');
-    final phoneController = TextEditingController(text: isEditing ? lecturer!.phoneNumber : '');
+    final nameController = TextEditingController(text: isEditing ? lecturer.fullName : '');
+    final dobController = TextEditingController(text: isEditing ? lecturer.dob : '');
+    final emailController = TextEditingController(text: isEditing ? lecturer.email : '');
+    final phoneController = TextEditingController(text: isEditing ? lecturer.phoneNumber : '');
 
-    String? selectedDepartment = (isEditing && _departments.contains(lecturer!.departmentName))
+    String? selectedDepartment = (isEditing && _departments.contains(lecturer.departmentName))
         ? lecturer.departmentName
         : null;
 
@@ -278,10 +287,8 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                         if (formKey.currentState!.validate()) {
                                           final departmentId = _departments.indexOf(selectedDepartment!) + 1;
 
-                                          // <<< ĐÃ SỬA LỖI Ở ĐÂY:
-                                          // Loại bỏ hoàn toàn 'lecturerCode' khỏi constructor call
                                           final newLecturer = Lecturer(
-                                            id: isEditing ? lecturer!.id : 0, // Sử dụng lecturer!
+                                            id: isEditing ? lecturer.id : 0,
                                             departmentId: departmentId,
                                             fullName: nameController.text,
                                             email: emailController.text,
@@ -318,7 +325,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
-  // Dialog để Xem chi tiết
   void _showLecturerDetailsDialog(Lecturer lecturer) {
     showDialog(
       context: context,
@@ -411,6 +417,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
   // --- CÁC WIDGET HELPER ---
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -594,46 +601,58 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   // --- GIAO DIỆN CHÍNH ---
   @override
   Widget build(BuildContext context) {
+    // Tính toán dữ liệu cho trang hiện tại
+    final int totalItems = _filteredLecturers.length;
+    final int totalPages = _rowsPerPage > 0 ? (totalItems / _rowsPerPage).ceil() : 0;
+    final int startIndex = (_currentPage - 1) * _rowsPerPage;
+    final int endIndex = min(startIndex + _rowsPerPage, totalItems);
+    final List<Lecturer> paginatedData = _filteredLecturers.sublist(startIndex, endIndex);
+
     return Scaffold(
       backgroundColor: screenBg,
-      body: SingleChildScrollView(
+      // <<< SỬA LỖI NaN: Dùng ListView thay cho SingleChildScrollView + Column >>>
+      body: ListView(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildControls(),
-            const SizedBox(height: 16),
-            FutureBuilder<List<Lecturer>>(
-              future: _lecturersFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Lỗi: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-                }
-                if (_filteredLecturers.isEmpty) {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 40.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Center(
-                        child: Text(
-                          'Không tìm thấy giảng viên nào.',
-                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                        )
-                    ),
-                  );
-                }
-                return _buildDataTable();
-              },
-            ),
-          ],
-        ),
+        children: [
+          _buildControls(),
+          const SizedBox(height: 16),
+          FutureBuilder<List<Lecturer>>(
+            future: _lecturersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Lỗi: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+              }
+              if (_filteredLecturers.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Center(
+                      child: Text(
+                        'Không tìm thấy giảng viên nào.',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      )
+                  ),
+                );
+              }
+              // Column này bây giờ an toàn vì nó nằm trong ListView
+              return Column(
+                children: [
+                  _buildDataTable(paginatedData),
+                  const SizedBox(height: 16),
+                  if (totalPages > 1) _buildPaginationControls(totalPages),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -718,7 +737,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
-  Widget _buildDataTable() {
+  Widget _buildDataTable(List<Lecturer> data) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -749,8 +768,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                     DataColumn(label: Text('Thao tác')),
                   ],
                   rows: List.generate(
-                    _filteredLecturers.length,
-                        (index) => _buildDataRow(index + 1, _filteredLecturers[index]),
+                    data.length,
+                        (index) {
+                      final stt = (_currentPage - 1) * _rowsPerPage + index + 1;
+                      return _buildDataRow(stt, data[index]);
+                    },
                   ),
                 ),
               ),
@@ -778,6 +800,38 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             IconButton(icon: const Icon(Icons.delete_outline, color: iconDelete, size: 20), onPressed: () => _showDeleteConfirmDialog(lecturer), tooltip: "Xóa", visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
           ],
         )),
+      ],
+    );
+  }
+
+  Widget _buildPaginationControls(int totalPages) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text('Trang $_currentPage / $totalPages'),
+        const SizedBox(width: 16),
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          onPressed: _currentPage > 1
+              ? () {
+            setState(() {
+              _currentPage--;
+            });
+          }
+              : null,
+          tooltip: 'Trang trước',
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          onPressed: _currentPage < totalPages
+              ? () {
+            setState(() {
+              _currentPage++;
+            });
+          }
+              : null,
+          tooltip: 'Trang sau',
+        ),
       ],
     );
   }

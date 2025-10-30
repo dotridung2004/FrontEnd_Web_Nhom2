@@ -1,10 +1,13 @@
+// lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'login_screen.dart'; // Import để Đăng xuất
 import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
 import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
 import '../screens/lich_hoc_screen.dart';
-import '../screens/giang_vien_screen.dart'; // 👈 1. IMPORT MÀN HÌNH MỚI
+import '../screens/giang_vien_screen.dart';
+import '../screens/tai_khoan_screen.dart'; // 👈 1. IMPORT MÀN HÌNH TÀI KHOẢN
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -40,8 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedContent = content;
     });
 
-    final scaffold = Scaffold.of(context);
-    if (scaffold.hasDrawer && scaffold.isDrawerOpen) {
+    // Tự động đóng drawer trên mobile sau khi chọn
+    if (Scaffold.of(context).hasDrawer && Scaffold.of(context).isDrawerOpen) {
       Navigator.pop(context);
     }
   }
@@ -106,13 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.all(20.0).copyWith(top: 40.0, bottom: 30.0),
             child: Row(
               children: [
-                CircleAvatar( /* ... Logo ... */
+                CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.white,
                   child: Text("TLU", style: TextStyle(color: tluBlue, fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
                 SizedBox(width: 12),
-                Column( /* ... University Name ... */
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("Thuy Loi", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -140,17 +143,15 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
           ]),
 
-          // --- 👇 2. CẬP NHẬT MỤC "GIẢNG VIÊN" ---
           _buildMenuItem(
             "GIẢNG VIÊN",
             "GIANG_VIEN",
             onTap: () => _onMenuItemSelected(
               "GIANG_VIEN",
               "Giảng viên",
-              const GiangVienScreen(), // <-- Dùng widget mới
+              const GiangVienScreen(),
             ),
           ),
-          // --- 👆 KẾT THÚC CẬP NHẬT ---
 
           _buildMenuItem(
             "LỊCH HỌC",
@@ -164,7 +165,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
           _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
           _buildMenuDivider(),
-          _buildMenuItem("TÀI KHOẢN", "TAI_KHOAN", onTap: () { /* TODO */ }),
+
+          // --- 👇 2. ĐÂY LÀ PHẦN ĐÃ CHỈNH SỬA ---
+          _buildMenuItem(
+            "TÀI KHOẢN",
+            "TAI_KHOAN",
+            onTap: () => _onMenuItemSelected(
+              "TAI_KHOAN",
+              "Quản lý Tài khoản", // Cập nhật tiêu đề cho AppBar
+              const TaiKhoanScreen(), // Điều hướng đến màn hình mới
+            ),
+          ),
+          // --- 👆 KẾT THÚC PHẦN CHỈNH SỬA ---
         ],
       ),
     );
@@ -179,25 +191,22 @@ class _HomeScreenState extends State<HomeScreen> {
       leading: isMobile ? Builder(builder: (context) => IconButton(icon: Icon(Icons.menu, color: Colors.black87), onPressed: () => Scaffold.of(context).openDrawer())) : null,
       title: (isMobile || title != "Trang chủ") ? Text(title, style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)) : null,
       actions: [
-        // Notification Icon
-        IconButton( /* ... Notification ... */
+        IconButton(
           onPressed: () {},
           icon: Stack(children: [ Icon(Icons.notifications_outlined, color: Colors.black54), Positioned(right: 0, top: 0, child: Container(padding: EdgeInsets.all(2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)), constraints: BoxConstraints(minWidth: 12, minHeight: 12), child: Text('3', style: TextStyle(color: Colors.white, fontSize: 8), textAlign: TextAlign.center)))]),
         ),
         VerticalDivider(indent: 12, endIndent: 12, color: Colors.grey.shade300),
-        // User Info
         Center(child: CircleAvatar(radius: 16, backgroundColor: tluBlue, child: Text(firstLetter, style: TextStyle(color: Colors.white)))),
         SizedBox(width: 8),
         Center(
-          child: Column( /* ... User Name and Role ... */
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [ Text(widget.user.name, style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), Text(_formatRole(widget.user.role), style: TextStyle(color: Colors.black54, fontSize: 12))],
           ),
         ),
         SizedBox(width: 16),
-        // Logout Button
-        Padding( /* ... Logout ... */
+        Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
           child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen())), style: ElevatedButton.styleFrom(backgroundColor: logoutRed, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))), child: Text("Đăng xuất")),
         ),

@@ -1,25 +1,23 @@
-// lib/api_service.dart
+// lib/table/api_service.dart
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+// 👇 LỖI CÚ PHÁP Ở ĐÂY: Sửa dấu '.' thành dấu ':'
 import 'package:http/http.dart' as http;
 
-// <<< THÊM IMPORT CHO CÁC MODEL BẠN SỬ DỤNG
-import 'table/user.dart';
-import 'table/home_summary.dart';
-import 'models/schedule.dart';
-import 'models/lecturer.dart';
-import 'models/department.dart';
+import '../table/user.dart';
+import '../table/home_summary.dart';
+import '../models/schedule.dart';
+import '../models/lecturer.dart';
+import '../models/app_user.dart';
 
 class ApiService {
-  // --- Cấu trúc Singleton để chỉ có 1 instance của ApiService ---
   ApiService._internal();
   static final ApiService _instance = ApiService._internal();
   factory ApiService() {
     return _instance;
   }
 
-  // --- Base URL cho API ---
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:8000/api';
@@ -30,7 +28,6 @@ class ApiService {
 
   String? _token;
 
-  // --- Lấy Headers cho request, có hoặc không có token ---
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -42,11 +39,10 @@ class ApiService {
     return headers;
   }
 
-  void setToken(String token) {
+  void setToken(String? token) {
     _token = token;
   }
 
-  // --- Các hàm API khác của bạn ---
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
     try {
@@ -59,14 +55,14 @@ class ApiService {
         final data = jsonDecode(response.body);
         final User user = User.fromJson(data['user']);
         if (data['token'] != null) {
-          _token = data['token'];
+          setToken(data['token']);
         }
         return user;
       } else {
         _handleApiError(response, 'Đăng nhập thất bại');
       }
     } catch (e) {
-      rethrow;
+      throw Exception('Không thể kết nối đến máy chủ.');
     }
   }
 
@@ -84,7 +80,6 @@ class ApiService {
     }
   }
 
-  // <<< HÀM fetchSchedules ĐÃ ĐƯỢC THÊM VÀO ĐÂY
   Future<List<Schedule>> fetchSchedules() async {
     final Uri url = Uri.parse('$baseUrl/schedules');
     try {
@@ -100,7 +95,21 @@ class ApiService {
     }
   }
 
-  // --- CÁC HÀM API CHO GIẢNG VIÊN (LECTURER) ---
+  Future<List<AppUser>> fetchUsers() async {
+    final Uri url = Uri.parse('$baseUrl/users');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+        final List usersJson = responseData['data'];
+        return usersJson.map((json) => AppUser.fromJson(json)).toList();
+      } else {
+        _handleApiError(response, 'Lỗi tải danh sách tài khoản');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   Future<List<Lecturer>> fetchLecturers() async {
     final Uri url = Uri.parse('$baseUrl/lecturers');
@@ -125,7 +134,7 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(lecturerData),
       );
-      if (response.statusCode == 201) { // 201 Created
+      if (response.statusCode == 201) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
         return Lecturer.fromJson(body);
       } else {
@@ -167,8 +176,6 @@ class ApiService {
     }
   }
 
-
-  // --- Hàm xử lý lỗi chung ---
   Never _handleApiError(http.Response response, String defaultMessage) {
     try {
       final error = jsonDecode(utf8.decode(response.bodyBytes));

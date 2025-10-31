@@ -1,5 +1,6 @@
 // lib/screens/tai_khoan_screen.dart
 
+import 'dart:async'; // Import thư viện async để dùng Timer
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/paginated_response.dart';
@@ -22,20 +23,35 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
   int _fromItem = 1;
   bool _isLoading = true;
 
+  // 👇 ================== BIẾN MỚI CHO TÌM KIẾM ================== 👇
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounce;
+  // 👆 ========================================================== 👆
+
   @override
   void initState() {
     super.initState();
     _fetchUsersForPage(1);
   }
 
+  // 👇 Giải phóng tài nguyên khi widget bị hủy
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> _fetchUsersForPage(int page) async {
     if (page < 1 || (page > _lastPage && _lastPage != 1)) return;
-    if (_isLoading && _users.isNotEmpty) return;
+    if (_isLoading && _users.isNotEmpty && _searchQuery.isEmpty) return;
 
     setState(() { _isLoading = true; });
 
     try {
-      final PaginatedUsersResponse response = await _apiService.fetchUsers(page);
+      // 👇 Truyền `searchQuery` vào hàm gọi API
+      final PaginatedUsersResponse response = await _apiService.fetchUsers(page, searchQuery: _searchQuery);
       setState(() {
         _users = response.users;
         _currentPage = response.currentPage;
@@ -50,10 +66,25 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     setState(() { _isLoading = false; });
   }
 
-  Future<void> _refreshData() async {
-    setState(() { _isLoading = true; });
-    await _fetchUsersForPage(1);
+  // 👇 ================== HÀM XỬ LÝ TÌM KIẾM ================== 👇
+  void _onSearchChanged(String query) {
+    // Hủy timer cũ nếu người dùng tiếp tục gõ
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    // Đặt timer mới, sau 500ms không gõ nữa thì mới thực hiện tìm kiếm
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (_searchQuery != query.trim()) {
+        setState(() {
+          _searchQuery = query.trim();
+          _currentPage = 1; // Reset về trang 1 khi tìm kiếm mới
+          _users = []; // Xóa dữ liệu cũ để hiển thị loading
+          _isLoading = true;
+        });
+        _fetchUsersForPage(1);
+      }
+    });
   }
+  // 👆 ======================================================== 👆
+
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
@@ -73,7 +104,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
 
     final _usernameController = TextEditingController(text: isEditing ? user!.email : '');
     final _fullNameController = TextEditingController(text: isEditing ? user!.username : '');
-    final _phoneController = TextEditingController(text: '0123456789'); // Placeholder
+    final _phoneController = TextEditingController(text: '0123456789');
     final _passwordController = TextEditingController();
 
     final Map<String, String> roleMap = {
@@ -84,7 +115,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     };
 
     String? _selectedRoleKey = isEditing
-        ? roleMap.entries.firstWhere((e) => e.key == user!.role, orElse: () => MapEntry('', 'teacher')).value
+        ? roleMap.entries.firstWhere((e) => e.value == user!.role, orElse: () => MapEntry('', 'teacher')).value
         : null;
 
     showDialog(
@@ -185,7 +216,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                         'name': _fullNameController.text.trim(),
                         'first_name': firstName,
                         'last_name': lastName,
-                        'email': _usernameController.text, // Tên đăng nhập chính là email
+                        'email': _usernameController.text,
                         'phone_number': _phoneController.text,
                         'role': _selectedRoleKey,
                         'status': 'active',
@@ -198,21 +229,13 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                         if (mounted) Navigator.of(context).pop();
 
                         if (isEditing) {
-                          final updatedUser = await _apiService.updateUser(user.id, userData);
+                          await _apiService.updateUser(user.id, userData);
                           _showSnackBar('Cập nhật thành công!');
-                          setState(() {
-                            final index = _users.indexWhere((u) => u.id == updatedUser.id);
-                            if (index != -1) _users[index] = updatedUser;
-                          });
                         } else {
-                          final newUser = await _apiService.addUser(userData);
+                          await _apiService.addUser(userData);
                           _showSnackBar('Thêm mới thành công!');
-                          setState(() {
-                            _users.insert(0, newUser);
-                            if (_users.length > 10) _users.removeLast();
-                            _totalItems++;
-                          });
                         }
+                        _fetchUsersForPage(_currentPage);
                       } catch (e) {
                         _showSnackBar('Thao tác thất bại: ${e.toString()}', isError: true);
                       }
@@ -267,11 +290,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                   if (mounted) Navigator.of(context).pop();
                   await _apiService.deleteUser(user.id);
                   _showSnackBar('Xóa thành công!');
-                  setState(() {
-                    _users.removeWhere((u) => u.id == user.id);
-                    _totalItems--;
-                  });
-                  if (_users.isEmpty && _currentPage > 1) {
+                  if (_users.length == 1 && _currentPage > 1) {
                     _fetchUsersForPage(_currentPage - 1);
                   } else {
                     _fetchUsersForPage(_currentPage);
@@ -288,9 +307,6 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     );
   }
 
-  // 👇 ================== PHẦN ĐÃ SỬA ĐỔI CHÍNH ================== 👇
-
-  // Hàm hiển thị dialog XEM CHI TIẾT với giao diện giống form Sửa
   void _showUserDetailsDialog(AppUser user) {
     showDialog(
       context: context,
@@ -334,15 +350,14 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                     children: [
                       Expanded(child: _buildReadOnlyField('Tên người dùng', user.username)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildReadOnlyField('Số điện thoại', '0123456789')), // Placeholder
+                      Expanded(child: _buildReadOnlyField('Số điện thoại', '0123456789')),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: _buildReadOnlyField('Mật khẩu', '********')), // Luôn ẩn mật khẩu
-                      const SizedBox(width: 24),
+                      Expanded(child: _buildReadOnlyField('Mật khẩu', '********')),
                       Expanded(child: _buildReadOnlyField('Vai trò', user.role)),
                     ],
                   ),
@@ -358,7 +373,6 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Đóng dialog chi tiết và mở dialog sửa
                 Navigator.of(context).pop();
                 _showUserDialog(user: user);
               },
@@ -375,21 +389,18 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     );
   }
 
-  // Widget helper mới để tạo TextFormField ở chế độ chỉ đọc
   Widget _buildReadOnlyField(String label, String value) {
     return TextFormField(
       initialValue: value,
-      readOnly: true, // Quan trọng: không cho phép chỉnh sửa
+      readOnly: true,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         filled: true,
-        fillColor: Colors.grey[200], // Màu nền xám nhẹ để phân biệt
+        fillColor: Colors.grey[200],
       ),
     );
   }
-
-  // 👆 ================== KẾT THÚC PHẦN SỬA ĐỔI ================== 👆
 
   @override
   Widget build(BuildContext context) {
@@ -442,10 +453,24 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
         ),
         SizedBox(
           width: 300,
+          // 👇 ================== CẬP NHẬT TEXTFIELD TÌM KIẾM ================== 👇
           child: TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Tìm kiếm...',
+              hintText: 'Tìm kiếm theo tên...',
               prefixIcon: const Icon(Icons.search),
+              // Thêm nút xóa nhanh khi có text
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  _searchController.clear();
+                  _onSearchChanged('');
+                },
+                splashRadius: 20,
+              )
+                  : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -455,6 +480,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
             ),
           ),
+          // 👆 ================================================================= 👆
         ),
       ],
     );
@@ -470,7 +496,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                 builder: (context, constraints) {
                   const double headerHeight = 56;
                   if (_users.isEmpty && !_isLoading) {
-                    return const Center(child: Text("Không có dữ liệu để hiển thị"));
+                    return Center(child: Text(_searchQuery.isNotEmpty ? "Không tìm thấy kết quả" : "Không có dữ liệu"));
                   }
 
                   final double availableHeight = constraints.maxHeight - headerHeight;

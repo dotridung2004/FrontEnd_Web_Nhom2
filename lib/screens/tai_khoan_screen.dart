@@ -71,8 +71,8 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     final bool isEditing = user != null;
     final _formKey = GlobalKey<FormState>();
 
-    final _usernameController = TextEditingController(text: isEditing ? user.email : '');
-    final _fullNameController = TextEditingController(text: isEditing ? user.username : '');
+    final _usernameController = TextEditingController(text: isEditing ? user!.email : '');
+    final _fullNameController = TextEditingController(text: isEditing ? user!.username : '');
     final _phoneController = TextEditingController(text: '0123456789'); // Placeholder
     final _passwordController = TextEditingController();
 
@@ -84,7 +84,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     };
 
     String? _selectedRoleKey = isEditing
-        ? roleMap.entries.firstWhere((e) => e.key == user.role, orElse: () => MapEntry('', 'teacher')).value
+        ? roleMap.entries.firstWhere((e) => e.key == user!.role, orElse: () => MapEntry('', 'teacher')).value
         : null;
 
     showDialog(
@@ -288,6 +288,109 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     );
   }
 
+  // 👇 ================== PHẦN ĐÃ SỬA ĐỔI CHÍNH ================== 👇
+
+  // Hàm hiển thị dialog XEM CHI TIẾT với giao diện giống form Sửa
+  void _showUserDetailsDialog(AppUser user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          titlePadding: EdgeInsets.zero,
+          title: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: Color(0xFF0D6EBA),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Thông tin chi tiết tài khoản',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  splashRadius: 20,
+                )
+              ],
+            ),
+          ),
+          content: SizedBox(
+            width: 700,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildReadOnlyField('Tên đăng nhập (Email)', user.email),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildReadOnlyField('Tên người dùng', user.username)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildReadOnlyField('Số điện thoại', '0123456789')), // Placeholder
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildReadOnlyField('Mật khẩu', '********')), // Luôn ẩn mật khẩu
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildReadOnlyField('Vai trò', user.role)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Đóng'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Đóng dialog chi tiết và mở dialog sửa
+                Navigator.of(context).pop();
+                _showUserDialog(user: user);
+              },
+              child: const Text('Sửa'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Widget helper mới để tạo TextFormField ở chế độ chỉ đọc
+  Widget _buildReadOnlyField(String label, String value) {
+    return TextFormField(
+      initialValue: value,
+      readOnly: true, // Quan trọng: không cho phép chỉnh sửa
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        filled: true,
+        fillColor: Colors.grey[200], // Màu nền xám nhẹ để phân biệt
+      ),
+    );
+  }
+
+  // 👆 ================== KẾT THÚC PHẦN SỬA ĐỔI ================== 👆
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -403,6 +506,11 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.info_outline, color: Colors.green),
+                                    onPressed: () => _showUserDetailsDialog(user),
+                                    tooltip: 'Xem chi tiết',
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.edit_outlined, color: Colors.blue),
                                     onPressed: () => _showUserDialog(user: user),

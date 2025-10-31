@@ -1,9 +1,13 @@
+// lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'login_screen.dart'; // Import để Đăng xuất
 import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
 import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
-import '../screens/lich_hoc_screen.dart'; // 👈 1. THÊM IMPORT NÀY
+import '../screens/lich_hoc_screen.dart';
+import '../screens/giang_vien_screen.dart'; // 👈 Import từ File 1
+import '../screens/tai_khoan_screen.dart'; // 👈 Import từ File 1
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -26,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedTitle = "Trang chủ";
   String _selectedMenuKey = "TRANG_CHU";
 
+  // (MỚI) Định nghĩa cỡ chữ menu (Từ File 2)
+  final double _menuFontSize = 15.0;
+
   @override
   void initState() {
     super.initState();
@@ -39,8 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedContent = content;
     });
 
-    final scaffold = Scaffold.of(context);
-    if (scaffold.hasDrawer && scaffold.isDrawerOpen) {
+    // Tự động đóng drawer trên mobile sau khi chọn
+    // (Sử dụng logic từ File 1 - rõ ràng hơn)
+    if (Scaffold.of(context).hasDrawer && Scaffold.of(context).isDrawerOpen) {
       Navigator.pop(context);
     }
   }
@@ -105,13 +113,13 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.all(20.0).copyWith(top: 40.0, bottom: 30.0),
             child: Row(
               children: [
-                CircleAvatar( /* ... Logo ... */
+                CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.white,
                   child: Text("TLU", style: TextStyle(color: tluBlue, fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
                 SizedBox(width: 12),
-                Column( /* ... University Name ... */
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("Thuy Loi", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -138,23 +146,42 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMenuItem("Lớp học phần", "LHP", onTap: () { /* TODO */ }),
             _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
           ]),
-          _buildMenuItem("GIẢNG VIÊN", "GIANG_VIEN", onTap: () { /* TODO */ }),
 
-          // --- 👇 2. CẬP NHẬT onTAP CHO LỊCH HỌC ---
+          // Lấy triển khai đầy đủ từ File 1
+          _buildMenuItem(
+            "GIẢNG VIÊN",
+            "GIANG_VIEN",
+            onTap: () => _onMenuItemSelected(
+              "GIANG_VIEN",
+              "Giảng viên",
+              const GiangVienScreen(), // 👈 Đã triển khai
+            ),
+          ),
+
+          // Lấy triển khai đầy đủ từ File 1
           _buildMenuItem(
             "LỊCH HỌC",
             "LICH_HOC",
             onTap: () => _onMenuItemSelected(
               "LICH_HOC",
               "Lịch học",
-              const LichHocScreen(), // <--- LIÊN KẾT ĐẾN LichHocScreen
+              const LichHocScreen(), // 👈 Đã triển khai
             ),
           ),
-          // --- 👆 KẾT THÚC CẬP NHẬT ---
 
           _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
           _buildMenuDivider(),
-          _buildMenuItem("TÀI KHOẢN", "TAI_KHOAN", onTap: () { /* TODO */ }),
+
+          // Lấy triển khai đầy đủ từ File 1
+          _buildMenuItem(
+            "TÀI KHOẢN",
+            "TAI_KHOAN",
+            onTap: () => _onMenuItemSelected(
+              "TAI_KHOAN",
+              "Quản lý Tài khoản",
+              const TaiKhoanScreen(), // 👈 Đã triển khai
+            ),
+          ),
         ],
       ),
     );
@@ -169,25 +196,22 @@ class _HomeScreenState extends State<HomeScreen> {
       leading: isMobile ? Builder(builder: (context) => IconButton(icon: Icon(Icons.menu, color: Colors.black87), onPressed: () => Scaffold.of(context).openDrawer())) : null,
       title: (isMobile || title != "Trang chủ") ? Text(title, style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)) : null,
       actions: [
-        // Notification Icon
-        IconButton( /* ... Notification ... */
+        IconButton(
           onPressed: () {},
           icon: Stack(children: [ Icon(Icons.notifications_outlined, color: Colors.black54), Positioned(right: 0, top: 0, child: Container(padding: EdgeInsets.all(2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)), constraints: BoxConstraints(minWidth: 12, minHeight: 12), child: Text('3', style: TextStyle(color: Colors.white, fontSize: 8), textAlign: TextAlign.center)))]),
         ),
         VerticalDivider(indent: 12, endIndent: 12, color: Colors.grey.shade300),
-        // User Info
         Center(child: CircleAvatar(radius: 16, backgroundColor: tluBlue, child: Text(firstLetter, style: TextStyle(color: Colors.white)))),
         SizedBox(width: 8),
         Center(
-          child: Column( /* ... User Name and Role ... */
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [ Text(widget.user.name, style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), Text(_formatRole(widget.user.role), style: TextStyle(color: Colors.black54, fontSize: 12))],
           ),
         ),
         SizedBox(width: 16),
-        // Logout Button
-        Padding( /* ... Logout ... */
+        Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
           child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen())), style: ElevatedButton.styleFrom(backgroundColor: logoutRed, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))), child: Text("Đăng xuất")),
         ),
@@ -195,13 +219,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Helper Widgets cho Menu ---
+  // --- Helper Widgets cho Menu (Sử dụng phiên bản từ File 2 có _menuFontSize) ---
   Widget _buildMenuItem(String title, String key, {VoidCallback? onTap}) {
     final bool isSelected = (_selectedMenuKey == key);
     return Container(
       color: isSelected ? tluLightBlue : Colors.transparent,
       child: ListTile(
-        title: Text(title, style: TextStyle(color: Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        title: Text(
+            title,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: _menuFontSize, // <-- THÊM CỠ CHỮ
+            )
+        ),
         onTap: onTap,
         dense: true,
       ),
@@ -214,7 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ExpansionTile(
         iconColor: Colors.white70,
         collapsedIconColor: Colors.white70,
-        title: Text(title, style: TextStyle(color: Colors.white)),
+        title: Text(
+            title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: _menuFontSize, // <-- THÊM CỠ CHỮ
+            )
+        ),
         children: children.map((child) => Padding(padding: const EdgeInsets.only(left: 16.0), child: child)).toList(),
       ),
     );

@@ -2,14 +2,14 @@
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// 👇 LỖI CÚ PHÁP Ở ĐÂY: Sửa dấu '.' thành dấu ':'
 import 'package:http/http.dart' as http;
 
-import '../table/user.dart';
+import '../models/app_user.dart';
+import '../models/paginated_response.dart';
 import '../table/home_summary.dart';
+import '../table/user.dart';
 import '../models/schedule.dart';
 import '../models/lecturer.dart';
-import '../models/app_user.dart';
 
 class ApiService {
   ApiService._internal();
@@ -66,6 +66,73 @@ class ApiService {
     }
   }
 
+  Future<PaginatedUsersResponse> fetchUsers(int page) async {
+    final Uri url = Uri.parse('$baseUrl/users?page=$page');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+        return PaginatedUsersResponse.fromJson(responseData);
+      } else {
+        _handleApiError(response, 'Lỗi tải danh sách tài khoản');
+      }
+    } catch (e) {
+      // Sửa lại khối catch để rõ ràng hơn
+      throw Exception('Lỗi kết nối khi tải người dùng: ${e.toString()}');
+    }
+  }
+
+  Future<AppUser> addUser(Map<String, dynamic> userData) async {
+    final Uri url = Uri.parse('$baseUrl/users');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(userData),
+      );
+      if (response.statusCode == 201) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+        return AppUser.fromJson(responseData['data']);
+      } else {
+        _handleApiError(response, 'Thêm tài khoản thất bại');
+      }
+    } catch (e) {
+      throw Exception('Lỗi kết nối khi thêm người dùng: ${e.toString()}');
+    }
+  }
+
+  Future<AppUser> updateUser(int id, Map<String, dynamic> userData) async {
+    final Uri url = Uri.parse('$baseUrl/users/$id');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(userData),
+      );
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+        return AppUser.fromJson(responseData['data']);
+      } else {
+        _handleApiError(response, 'Cập nhật tài khoản thất bại');
+      }
+    } catch (e) {
+      throw Exception('Lỗi kết nối khi cập nhật người dùng: ${e.toString()}');
+    }
+  }
+
+  Future<void> deleteUser(int id) async {
+    final Uri url = Uri.parse('$baseUrl/users/$id');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        _handleApiError(response, 'Xóa tài khoản thất bại');
+      }
+    } catch (e) {
+      throw Exception('Lỗi kết nối khi xóa người dùng: ${e.toString()}');
+    }
+  }
+
+  // --- CÁC HÀM API KHÁC ĐÃ SỬA LỖI ---
   Future<HomeSummary> fetchHomeSummary(int userId) async {
     final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
     try {
@@ -76,7 +143,8 @@ class ApiService {
         _handleApiError(response, 'Lỗi tải dữ liệu trang chủ');
       }
     } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi tải trang chủ: ${e.toString()}');
     }
   }
 
@@ -91,23 +159,8 @@ class ApiService {
         _handleApiError(response, 'Lỗi tải lịch học');
       }
     } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<AppUser>> fetchUsers() async {
-    final Uri url = Uri.parse('$baseUrl/users');
-    try {
-      final response = await http.get(url, headers: _getHeaders());
-      if (response.statusCode == 200) {
-        final responseData = json.decode(utf8.decode(response.bodyBytes));
-        final List usersJson = responseData['data'];
-        return usersJson.map((json) => AppUser.fromJson(json)).toList();
-      } else {
-        _handleApiError(response, 'Lỗi tải danh sách tài khoản');
-      }
-    } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi tải lịch học: ${e.toString()}');
     }
   }
 
@@ -122,7 +175,8 @@ class ApiService {
         _handleApiError(response, 'Lỗi tải danh sách giảng viên');
       }
     } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi tải giảng viên: ${e.toString()}');
     }
   }
 
@@ -141,7 +195,8 @@ class ApiService {
         _handleApiError(response, 'Thêm giảng viên thất bại');
       }
     } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi thêm giảng viên: ${e.toString()}');
     }
   }
 
@@ -160,7 +215,8 @@ class ApiService {
         _handleApiError(response, 'Cập nhật giảng viên thất bại');
       }
     } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi cập nhật giảng viên: ${e.toString()}');
     }
   }
 
@@ -172,7 +228,8 @@ class ApiService {
         _handleApiError(response, 'Xóa giảng viên thất bại');
       }
     } catch (e) {
-      rethrow;
+      // 👇 SỬA LẠI KHỐI CATCH
+      throw Exception('Lỗi kết nối khi xóa giảng viên: ${e.toString()}');
     }
   }
 

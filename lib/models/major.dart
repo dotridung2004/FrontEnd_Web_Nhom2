@@ -1,12 +1,14 @@
-// lib/models/major.dart
+// Tên file: lib/models/major.dart
+
 import 'dart:convert';
 
 class Major {
   final int id;
-  final String code; // Mã ngành (TLA117)
-  final String name; // Tên ngành (Kỹ thuật phần mềm)
-  final String departmentName; // Khoa (Công nghệ thông tin)
-  final int teacherCount; // Số lượng giảng viên
+  final String code;
+  final String name;
+  final String departmentName;
+  final int teacherCount;
+  final DateTime updatedAt; // 👈 Đảm bảo bạn có dòng này
 
   Major({
     required this.id,
@@ -14,6 +16,7 @@ class Major {
     required this.name,
     required this.departmentName,
     required this.teacherCount,
+    required this.updatedAt, // 👈 Và dòng này
   });
 
   factory Major.fromJson(Map<String, dynamic> json) {
@@ -21,12 +24,13 @@ class Major {
       id: json['id'] ?? 0,
       code: json['code'] ?? 'N/A',
       name: json['name'] ?? 'N/A',
-
-      // Giả định 'khoa' là một quan hệ lồng nhau
-      departmentName: json['department']?['name'] ?? 'N/A',
-
-      // Giả định 'so_luong_giang_vien' được lấy từ withCount
+      departmentName: json['departmentName'] ?? 'N/A',
       teacherCount: (json['teachers_count'] as num?)?.toInt() ?? 0,
+
+      // 👈 Và đảm bảo bạn parse 'updated_at'
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime(1970),
     );
   }
 }

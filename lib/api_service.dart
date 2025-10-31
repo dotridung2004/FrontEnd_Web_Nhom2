@@ -1,3 +1,4 @@
+// Tên file: lib/services/api_service.dart
 import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
@@ -10,15 +11,12 @@ import 'table/user.dart';
 import 'table/home_summary.dart';
 import 'models/schedule.dart';
 import 'models/department.dart';
-import 'models/department_detail.dart'; // (Import từ lượt trước)
+import 'models/department_detail.dart';
 import 'models/room.dart';
-import 'models/major.dart';
+import 'models/major.dart'; // Model cho danh sách
 import 'models/division.dart';
 import 'models/division_detail.dart';
-
-// 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
-// (Xóa toàn bộ class 'PaginatedDivisions' vì không còn dùng)
-// 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
+import 'models/major_detail.dart'; // Model cho chi tiết
 
 
 class ApiService {
@@ -169,22 +167,6 @@ class ApiService {
     }
   }
 
-  Future<List<Major>> fetchMajors() async {
-    final Uri url = Uri.parse('$baseUrl/majors');
-    try {
-      final response = await http.get(url, headers: _getHeaders());
-      if (response.statusCode == 200) {
-        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-        List<dynamic> dataList = (body is Map<String, dynamic> && body.containsKey('data')) ? body['data'] : (body is List ? body : []);
-        return dataList.map((item) => Major.fromJson(item)).toList();
-      } else {
-        _handleApiError(response, 'Lỗi tải danh sách ngành học');
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   // ===================================================
   // 🔬 QUẢN LÝ KHOA (DEPARTMENT)
   // ===================================================
@@ -283,7 +265,6 @@ class ApiService {
   // 🔬 QUẢN LÝ BỘ MÔN (DIVISION)
   // ===================================================
 
-  // 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
   /// Tải TOÀN BỘ danh sách bộ môn (Dùng cho Phân trang Front-end)
   Future<List<Division>> fetchDivisions() async {
     final Uri url = Uri.parse('$baseUrl/divisions'); // (Xóa page và query)
@@ -311,7 +292,6 @@ class ApiService {
       rethrow;
     }
   }
-  // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
 
   /// Tải chi tiết 1 bộ môn
   Future<DivisionDetail> fetchDivisionDetails(int divisionId) async {
@@ -383,6 +363,106 @@ class ApiService {
       }
     } catch (e) {
       print("deleteDivision Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  // ===================================================
+  // 🔬 QUẢN LÝ NGÀNH HỌC (MAJOR)
+  // ===================================================
+
+  /// Tải TOÀN BỘ danh sách ngành học (Đã sửa)
+  Future<List<Major>> fetchMajors() async {
+    final Uri url = Uri.parse('$baseUrl/majors');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
+        List<dynamic> dataList = (body is Map<String, dynamic> && body.containsKey('data')) ? body['data'] : (body is List ? body : []);
+
+        List<Major> majors = dataList.map((item) => Major.fromJson(item)).toList();
+
+        // Sắp xếp theo tên ngành (A-Z) để khớp với model 'major.dart' của bạn
+
+        return majors;
+
+      } else {
+        _handleApiError(response, 'Lỗi tải danh sách ngành học');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Tải chi tiết 1 ngành học
+  Future<MajorDetail> fetchMajorDetails(int majorId) async {
+    final Uri url = Uri.parse('$baseUrl/majors/$majorId');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return MajorDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tải chi tiết ngành học');
+      }
+    } catch (e) {
+      print("fetchMajorDetails Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Tạo mới ngành học
+  Future<Major> createMajor(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/majors');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      // API có thể trả về model Major (đã được cập nhật)
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return Major.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tạo ngành học');
+      }
+    } catch (e) {
+      print("createMajor Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Cập nhật ngành học
+  Future<Major> updateMajor(int majorId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/majors/$majorId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return Major.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật ngành học');
+      }
+    } catch (e) {
+      print("updateMajor Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Xóa ngành học
+  Future<void> deleteMajor(int majorId) async {
+    final Uri url = Uri.parse('$baseUrl/majors/$majorId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      } else {
+        _handleApiError(response, 'Lỗi xóa ngành học');
+      }
+    } catch (e) {
+      print("deleteMajor Lỗi: $e");
       rethrow;
     }
   }

@@ -10,44 +10,16 @@ import 'table/user.dart';
 import 'table/home_summary.dart';
 import 'models/schedule.dart';
 import 'models/department.dart';
+import 'models/department_detail.dart'; // (Import từ lượt trước)
 import 'models/room.dart';
 import 'models/major.dart';
 import 'models/division.dart';
 import 'models/division_detail.dart';
 
-// 👇 **** SỬA LỖI: THÊM IMPORT **** 👇
-import 'models/department_detail.dart';
-// 👆 **** KẾT THÚC SỬA LỖI **** 👆
+// 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
+// (Xóa toàn bộ class 'PaginatedDivisions' vì không còn dùng)
+// 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
 
-// Class PaginatedDivisions (Dùng cho màn hình Bộ môn)
-class PaginatedDivisions {
-  final List<Division> divisions;
-  final int totalItems;
-  final int currentPage;
-  final int lastPage;
-
-  PaginatedDivisions({
-    required this.divisions,
-    required this.totalItems,
-    required this.currentPage,
-    required this.lastPage,
-  });
-
-  factory PaginatedDivisions.fromJson(Map<String, dynamic> json) {
-    List<Division> divisionsList = [];
-    if (json['data'] != null && json['data'] is List) {
-      divisionsList = (json['data'] as List)
-          .map((item) => Division.fromJson(item))
-          .toList();
-    }
-    return PaginatedDivisions(
-      divisions: divisionsList,
-      totalItems: json['total'] ?? 0,
-      currentPage: json['current_page'] ?? 1,
-      lastPage: json['last_page'] ?? 1,
-    );
-  }
-}
 
 class ApiService {
   // --- Singleton Pattern ---
@@ -93,24 +65,14 @@ class ApiService {
         headers: _getHeaders(needsAuth: false),
         body: jsonEncode({'email': email, 'password': password}),
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final User user = User.fromJson(data['user']);
-        if (data['token'] != null) {
-          _token = data['token'];
-        }
-        if (user.status == 'active') {
-          return user;
-        } else {
-          throw Exception('❌ Tài khoản của bạn đã bị vô hiệu hóa.');
-        }
-      } else {
-        _handleApiError(response, 'Đăng nhập thất bại');
-      }
-    } catch (e) {
-      rethrow;
-    }
+        if (data['token'] != null) { _token = data['token']; }
+        if (user.status == 'active') { return user; }
+        else { throw Exception('❌ Tài khoản của bạn đã bị vô hiệu hóa.'); }
+      } else { _handleApiError(response, 'Đăng nhập thất bại'); }
+    } catch (e) { rethrow; }
   }
 
   Future<HomeSummary> fetchHomeSummary(int userId) async {
@@ -119,12 +81,8 @@ class ApiService {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         return HomeSummary.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
-      } else {
-        _handleApiError(response, 'Lỗi tải dữ liệu trang chủ');
-      }
-    } catch (e) {
-      rethrow;
-    }
+      } else { _handleApiError(response, 'Lỗi tải dữ liệu trang chủ'); }
+    } catch (e) { rethrow; }
   }
 
   // ===================================================
@@ -274,7 +232,7 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(data),
       );
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) { // (Chấp nhận cả 200 và 201)
         return Department.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
         _handleApiError(response, 'Lỗi tạo khoa');
@@ -325,14 +283,26 @@ class ApiService {
   // 🔬 QUẢN LÝ BỘ MÔN (DIVISION)
   // ===================================================
 
-  /// Tải danh sách bộ môn (Dùng cho Phân trang Back-end)
-  Future<PaginatedDivisions> fetchDivisions({int page = 1, String query = ''}) async {
-    final Uri url = Uri.parse('$baseUrl/divisions?page=$page&search=${Uri.encodeComponent(query)}');
+  // 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
+  /// Tải TOÀN BỘ danh sách bộ môn (Dùng cho Phân trang Front-end)
+  Future<List<Division>> fetchDivisions() async {
+    final Uri url = Uri.parse('$baseUrl/divisions'); // (Xóa page và query)
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-        return PaginatedDivisions.fromJson(body);
+
+        // (Logic tải danh sách đầy đủ, giống fetchDepartments)
+        List<dynamic> dataList;
+        if (body is List) {
+          dataList = body;
+        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
+          dataList = body['data'];
+        } else {
+          throw Exception('Định dạng dữ liệu không hợp lệ');
+        }
+        return dataList.map((item) => Division.fromJson(item)).toList();
+
       } else {
         _handleApiError(response, 'Lỗi tải danh sách bộ môn');
       }
@@ -341,6 +311,7 @@ class ApiService {
       rethrow;
     }
   }
+  // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
 
   /// Tải chi tiết 1 bộ môn
   Future<DivisionDetail> fetchDivisionDetails(int divisionId) async {
@@ -367,7 +338,7 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(data),
       );
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) { // (Chấp nhận cả 200)
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         return Division.fromJson(responseData);
       } else {

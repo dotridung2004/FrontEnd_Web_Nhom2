@@ -1,6 +1,6 @@
 // lib/screens/tai_khoan_screen.dart
 
-import 'dart:async'; // Import thư viện async để dùng Timer
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/paginated_response.dart';
@@ -23,11 +23,9 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
   int _fromItem = 1;
   bool _isLoading = true;
 
-  // 👇 ================== BIẾN MỚI CHO TÌM KIẾM ================== 👇
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Timer? _debounce;
-  // 👆 ========================================================== 👆
 
   @override
   void initState() {
@@ -35,7 +33,6 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     _fetchUsersForPage(1);
   }
 
-  // 👇 Giải phóng tài nguyên khi widget bị hủy
   @override
   void dispose() {
     _searchController.dispose();
@@ -50,7 +47,6 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      // 👇 Truyền `searchQuery` vào hàm gọi API
       final PaginatedUsersResponse response = await _apiService.fetchUsers(page, searchQuery: _searchQuery);
       setState(() {
         _users = response.users;
@@ -66,25 +62,20 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     setState(() { _isLoading = false; });
   }
 
-  // 👇 ================== HÀM XỬ LÝ TÌM KIẾM ================== 👇
   void _onSearchChanged(String query) {
-    // Hủy timer cũ nếu người dùng tiếp tục gõ
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    // Đặt timer mới, sau 500ms không gõ nữa thì mới thực hiện tìm kiếm
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (_searchQuery != query.trim()) {
         setState(() {
           _searchQuery = query.trim();
-          _currentPage = 1; // Reset về trang 1 khi tìm kiếm mới
-          _users = []; // Xóa dữ liệu cũ để hiển thị loading
+          _currentPage = 1;
+          _users = [];
           _isLoading = true;
         });
         _fetchUsersForPage(1);
       }
     });
   }
-  // 👆 ======================================================== 👆
-
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
@@ -104,7 +95,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
 
     final _usernameController = TextEditingController(text: isEditing ? user!.email : '');
     final _fullNameController = TextEditingController(text: isEditing ? user!.username : '');
-    final _phoneController = TextEditingController(text: '0123456789');
+    final _phoneController = TextEditingController(text: '0123456789'); // Placeholder
     final _passwordController = TextEditingController();
 
     final Map<String, String> roleMap = {
@@ -229,7 +220,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
                         if (mounted) Navigator.of(context).pop();
 
                         if (isEditing) {
-                          await _apiService.updateUser(user.id, userData);
+                          await _apiService.updateUser(user!.id, userData);
                           _showSnackBar('Cập nhật thành công!');
                         } else {
                           await _apiService.addUser(userData);
@@ -307,83 +298,119 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
     );
   }
 
+  // 👇 ================== PHẦN ĐÃ SỬA ĐỔI CHÍNH ================== 👇
   void _showUserDetailsDialog(AppUser user) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          titlePadding: EdgeInsets.zero,
-          title: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: Color(0xFF0D6EBA),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Thông tin chi tiết tài khoản',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        // Sử dụng StatefulBuilder để quản lý trạng thái của việc hiển thị mật khẩu
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            bool isPasswordVisible = false;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              titlePadding: EdgeInsets.zero,
+              title: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Color(0xFF0D6EBA),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                 ),
-                IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Thông tin chi tiết tài khoản',
+                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                      splashRadius: 20,
+                    )
+                  ],
+                ),
+              ),
+              content: SizedBox(
+                width: 700,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildReadOnlyField('Tên đăng nhập (Email)', user.email),
+                      const SizedBox(height: 16),
+                      // Hàng cho Tên người dùng và Số điện thoại
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildReadOnlyField('Tên người dùng', user.username)),
+                          const SizedBox(width: 24),
+                          Expanded(child: _buildReadOnlyField('Số điện thoại', '0123456789')), // Placeholder
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Hàng cho Mật khẩu và Vai trò
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Ô mật khẩu với icon con mắt
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: '********',
+                              readOnly: true,
+                              obscureText: !isPasswordVisible, // Điều khiển ẩn/hiện text
+                              decoration: InputDecoration(
+                                labelText: 'Mật khẩu',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    // Cập nhật lại trạng thái của dialog để thay đổi icon và obscureText
+                                    setDialogState(() {
+                                      isPasswordVisible = !isPasswordVisible;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(child: _buildReadOnlyField('Vai trò', user.role)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              actions: [
+                OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  splashRadius: 20,
-                )
+                  child: const Text('Đóng'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Đóng dialog chi tiết và mở dialog sửa
+                    Navigator.of(context).pop();
+                    _showUserDialog(user: user);
+                  },
+                  child: const Text('Sửa'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
               ],
-            ),
-          ),
-          content: SizedBox(
-            width: 700,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildReadOnlyField('Tên đăng nhập (Email)', user.email),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _buildReadOnlyField('Tên người dùng', user.username)),
-                      const SizedBox(width: 24),
-                      Expanded(child: _buildReadOnlyField('Số điện thoại', '0123456789')),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _buildReadOnlyField('Mật khẩu', '********')),
-                      Expanded(child: _buildReadOnlyField('Vai trò', user.role)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Đóng'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showUserDialog(user: user);
-              },
-              child: const Text('Sửa'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -401,6 +428,7 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
       ),
     );
   }
+  // 👆 ================== KẾT THÚC PHẦN SỬA ĐỔI ================== 👆
 
   @override
   Widget build(BuildContext context) {
@@ -453,14 +481,12 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
         ),
         SizedBox(
           width: 300,
-          // 👇 ================== CẬP NHẬT TEXTFIELD TÌM KIẾM ================== 👇
           child: TextField(
             controller: _searchController,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
               hintText: 'Tìm kiếm theo tên...',
               prefixIcon: const Icon(Icons.search),
-              // Thêm nút xóa nhanh khi có text
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                 icon: const Icon(Icons.clear),
@@ -480,7 +506,6 @@ class _TaiKhoanScreenState extends State<TaiKhoanScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
             ),
           ),
-          // 👆 ================================================================= 👆
         ),
       ],
     );

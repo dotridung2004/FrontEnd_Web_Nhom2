@@ -12,6 +12,7 @@ class ClassCourse {
   final String departmentName; // Khoa
   final String courseName; // Tên học phần
   final String semester; // Học kỳ
+  final String divisionName; // <-- ✅ PHẢI CÓ TRƯỜNG NÀY
 
   ClassCourse({
     required this.id,
@@ -20,26 +21,25 @@ class ClassCourse {
     required this.departmentName,
     required this.courseName,
     required this.semester,
+    required this.divisionName, // <-- ✅ THÊM VÀO CONSTRUCTOR
   });
 
   /// Factory constructor để parse JSON
-  /// Giả định cấu trúc JSON lồng nhau từ API
   factory ClassCourse.fromJson(Map<String, dynamic> json) {
     return ClassCourse(
       id: json['id'] ?? 0,
-      name: json['name'] ?? 'N/A', // Tên lớp (CSE360)
+      name: json['name'] ?? 'N/A',
 
-      // Giả định giảng viên được gán trực tiếp cho lớp này
       teacherName: json['teacher']?['name'] ?? 'N/A',
-
-      // Giả định khoa từ môn học
       departmentName: json['course']?['department']?['name'] ?? 'N/A',
-
-      // Giả định tên học phần
       courseName: json['course']?['name'] ?? 'N/A',
 
-      // Giả định học kỳ
-      semester: json['semester'] ?? 'N/A',
+      // ==========================================================
+      // ✅ SỬA LỖI TẠI ĐÂY:
+      // Đọc 'semester' và 'divisionName' đã được format bởi backend
+      // ==========================================================
+      semester: json['semester'] ?? 'N/A', // Đọc 'HK1 2024-2025'
+      divisionName: json['division']?['name'] ?? 'N/A', // Đọc tên bộ môn
     );
   }
 }

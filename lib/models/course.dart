@@ -28,11 +28,19 @@ class Course {
       code: json['code'] ?? 'N/A',
       name: json['name'] ?? 'N/A',
       credits: (json['credits'] as num?)?.toInt() ?? 0,
-      departmentName: json['department']?['name'] ?? 'N/A',
 
-      // 👇 === SỬA DÒNG NÀY === 👇
-      type: json['subject_type'] ?? 'N/A', // Đọc đúng tên cột 'subject_type' từ API
-      // 👆 === KẾT THÚC SỬA === 👆
+      // ==========================================================
+      // ✅ SỬA LỖI 1:
+      // Giữ nguyên bản sửa lỗi từ lần trước, đọc 'departmentName'
+      // mà backend (hàm getFormData) đã gửi về.
+      // ==========================================================
+      departmentName: json['departmentName'] ?? 'N/A',
+
+      // ==========================================================
+      // ✅ SỬA LỖI 2:
+      // Dùng bản sửa lỗi MỚI của bạn, đọc 'subject_type'
+      // ==========================================================
+      type: json['subject_type'] ?? 'N/A',
     );
   }
 }

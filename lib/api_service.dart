@@ -1,4 +1,3 @@
-// Tên file: lib/services/api_service.dart
 import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
@@ -17,8 +16,15 @@ import 'models/major.dart'; // Model cho danh sách
 import 'models/division.dart';
 import 'models/division_detail.dart';
 import 'models/major_detail.dart'; // Model cho chi tiết
-import 'models/room_detail.dart'; // <-- THÊM MỚI
+import 'models/room_detail.dart';
 import 'models/course_detail.dart';
+import 'models/class_course_detail.dart';
+import 'models/class_model.dart';
+
+// ===== IMPORT MỚI ĐỂ LẤY DATA CHO FORM =====
+import 'models/class_course_form_data.dart';
+// ===========================================
+
 class ApiService {
   // --- Singleton Pattern ---
   ApiService._internal();
@@ -441,10 +447,9 @@ class ApiService {
   }
 
   // ===================================================
-  // 🔬 QUẢN LÝ PHÒNG HỌC (ROOM) - (PHẦN MỚI)
+  // 🔬 QUẢN LÝ PHÒNG HỌC (ROOM)
   // ===================================================
 
-  /// Tạo mới phòng học
   Future<Room> createRoom(Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/rooms');
     try {
@@ -464,7 +469,6 @@ class ApiService {
     }
   }
 
-  /// Cập nhật phòng học
   Future<Room> updateRoom(int roomId, Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
     try {
@@ -484,7 +488,6 @@ class ApiService {
     }
   }
 
-  /// Xóa phòng học
   Future<void> deleteRoom(int roomId) async {
     final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
     try {
@@ -500,7 +503,6 @@ class ApiService {
     }
   }
 
-  /// Tải chi tiết 1 phòng học
   Future<RoomDetail> fetchRoomDetails(int roomId) async {
     final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
     try {
@@ -515,13 +517,13 @@ class ApiService {
       rethrow;
     }
   }
-// ===================================================
-  // 🔬 QUẢN LÝ HỌC PHẦN (COURSE) - (PHẦN MỚI)
+
+  // ===================================================
+  // 🔬 QUẢN LÝ HỌC PHẦN (COURSE)
   // ===================================================
 
-  /// Tải chi tiết 1 học phần (cho popup xem/sửa)
   Future<CourseDetail> fetchCourseDetails(int courseId) async {
-    final Uri url = Uri.parse('$baseUrl/courses/$courseId'); // Giả sử endpoint là /courses/{id}
+    final Uri url = Uri.parse('$baseUrl/courses/$courseId');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
@@ -535,7 +537,6 @@ class ApiService {
     }
   }
 
-  /// Tạo mới học phần
   Future<void> createCourse(Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/courses');
     try {
@@ -545,7 +546,7 @@ class ApiService {
         body: jsonEncode(data),
       );
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return; // Thành công
+        return;
       } else {
         _handleApiError(response, 'Lỗi tạo học phần');
       }
@@ -555,7 +556,6 @@ class ApiService {
     }
   }
 
-  /// Cập nhật học phần
   Future<void> updateCourse(int courseId, Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/courses/$courseId');
     try {
@@ -565,7 +565,7 @@ class ApiService {
         body: jsonEncode(data),
       );
       if (response.statusCode == 200) {
-        return; // Thành công
+        return;
       } else {
         _handleApiError(response, 'Lỗi cập nhật học phần');
       }
@@ -575,13 +575,12 @@ class ApiService {
     }
   }
 
-  /// Xóa học phần
   Future<void> deleteCourse(int courseId) async {
     final Uri url = Uri.parse('$baseUrl/courses/$courseId');
     try {
       final response = await http.delete(url, headers: _getHeaders());
       if (response.statusCode == 204 || response.statusCode == 200) {
-        return; // Thành công
+        return;
       } else {
         _handleApiError(response, 'Lỗi xóa học phần');
       }
@@ -590,7 +589,108 @@ class ApiService {
       rethrow;
     }
   }
-}
+
+  // ===================================================
+  // 📚 QUẢN LÝ LỚP HỌC PHẦN (CLASS COURSE)
+  // ===================================================
+
+  Future<ClassCourseDetail> fetchClassCourseDetails(int classCourseId) async {
+    final Uri url = Uri.parse('$baseUrl/class-courses/$classCourseId/details');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return ClassCourseDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tải chi tiết lớp học phần');
+      }
+    } catch (e) {
+      print("fetchClassCourseDetails Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  Future<ClassCourse> createClassCourse(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/class-courses');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return ClassCourse.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tạo lớp học phần');
+      }
+    } catch (e) {
+      print("createClassCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  Future<ClassCourse> updateClassCourse(int classCourseId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/class-courses/$classCourseId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return ClassCourse.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật lớp học phần');
+      }
+    } catch (e) {
+      print("updateClassCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> deleteClassCourse(int classCourseId) async {
+    final Uri url = Uri.parse('$baseUrl/class-courses/$classCourseId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      } else {
+        _handleApiError(response, 'Lỗi xóa lớp học phần');
+      }
+    } catch (e) {
+      print("deleteClassCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  // --- CÁC HÀM LẤY DỮ LIỆU CHO FORM ---
+
+  // =========================================================
+  // ✅ HÀM MỚI: TẢI TẤT CẢ DATA CHO FORM TRONG 1 LẦN GỌI
+  // =========================================================
+  Future<ClassCourseFormData> fetchClassCourseFormData() async {
+    // API endpoint này được định nghĩa trong routes/api.php
+    final Uri url = Uri.parse('$baseUrl/class-courses/form-data');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return ClassCourseFormData.fromJson(data);
+      } else {
+        _handleApiError(response, 'Lỗi tải dữ liệu cho form');
+      }
+    } catch (e) {
+      print("fetchClassCourseFormData Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  // --- BỎ CÁC HÀM MOCK DATA CŨ ---
+  // Future<List<Course>> fetchSimpleCourses() async { ... }
+  // Future<List<User>> fetchSimpleTeachers() async { ... }
+  // Future<List<Department>> fetchSimpleDepartments() async { ... }
+  // Future<List<Division>> fetchSimpleDivisions() async { ... }
+  // Future<List<ClassModel>> fetchSimpleStudentClasses() async { ... }
+
   // ===================================================
   // Private Helper Methods
   // ===================================================
@@ -612,4 +712,4 @@ class ApiService {
       rethrow;
     }
   }
-// End of ApiService class
+} // <-- END OF ApiService CLASS

@@ -18,7 +18,7 @@ import 'models/division.dart';
 import 'models/division_detail.dart';
 import 'models/major_detail.dart'; // Model cho chi tiết
 import 'models/room_detail.dart'; // <-- THÊM MỚI
-
+import 'models/course_detail.dart';
 class ApiService {
   // --- Singleton Pattern ---
   ApiService._internal();
@@ -515,7 +515,82 @@ class ApiService {
       rethrow;
     }
   }
+// ===================================================
+  // 🔬 QUẢN LÝ HỌC PHẦN (COURSE) - (PHẦN MỚI)
+  // ===================================================
 
+  /// Tải chi tiết 1 học phần (cho popup xem/sửa)
+  Future<CourseDetail> fetchCourseDetails(int courseId) async {
+    final Uri url = Uri.parse('$baseUrl/courses/$courseId'); // Giả sử endpoint là /courses/{id}
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return CourseDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tải chi tiết học phần');
+      }
+    } catch (e) {
+      print("fetchCourseDetails Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Tạo mới học phần
+  Future<void> createCourse(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/courses');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return; // Thành công
+      } else {
+        _handleApiError(response, 'Lỗi tạo học phần');
+      }
+    } catch (e) {
+      print("createCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Cập nhật học phần
+  Future<void> updateCourse(int courseId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/courses/$courseId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return; // Thành công
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật học phần');
+      }
+    } catch (e) {
+      print("updateCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Xóa học phần
+  Future<void> deleteCourse(int courseId) async {
+    final Uri url = Uri.parse('$baseUrl/courses/$courseId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return; // Thành công
+      } else {
+        _handleApiError(response, 'Lỗi xóa học phần');
+      }
+    } catch (e) {
+      print("deleteCourse Lỗi: $e");
+      rethrow;
+    }
+  }
+}
   // ===================================================
   // Private Helper Methods
   // ===================================================
@@ -537,4 +612,4 @@ class ApiService {
       rethrow;
     }
   }
-} // End of ApiService class
+// End of ApiService class

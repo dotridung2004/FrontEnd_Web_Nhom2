@@ -28,11 +28,11 @@ class Course {
       code: json['code'] ?? 'N/A',
       name: json['name'] ?? 'N/A',
       credits: (json['credits'] as num?)?.toInt() ?? 0,
-
-      // Giả định khoa là một đối tượng lồng nhau, giống như trong Schedule model
       departmentName: json['department']?['name'] ?? 'N/A',
 
-      type: json['type'] ?? 'N/A',
+      // 👇 === SỬA DÒNG NÀY === 👇
+      type: json['subject_type'] ?? 'N/A', // Đọc đúng tên cột 'subject_type' từ API
+      // 👆 === KẾT THÚC SỬA === 👆
     );
   }
 }

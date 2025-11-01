@@ -17,7 +17,7 @@ import 'models/major.dart'; // Model cho danh sách
 import 'models/division.dart';
 import 'models/division_detail.dart';
 import 'models/major_detail.dart'; // Model cho chi tiết
-
+import 'models/room_detail.dart'; // <-- THÊM MỚI
 
 class ApiService {
   // --- Singleton Pattern ---
@@ -170,8 +170,6 @@ class ApiService {
   // ===================================================
   // 🔬 QUẢN LÝ KHOA (DEPARTMENT)
   // ===================================================
-
-  /// Tải TOÀN BỘ danh sách khoa (Dùng cho Phân trang Front-end)
   Future<List<Department>> fetchDepartments() async {
     final Uri url = Uri.parse('$baseUrl/departments');
     try {
@@ -189,7 +187,6 @@ class ApiService {
     }
   }
 
-  /// Tải chi tiết 1 khoa (Dùng cho dialog 'Xem')
   Future<DepartmentDetail> fetchDepartmentDetails(int departmentId) async {
     final Uri url = Uri.parse('$baseUrl/departments/$departmentId/details');
     try {
@@ -205,7 +202,6 @@ class ApiService {
     }
   }
 
-  /// Tạo mới khoa
   Future<Department> createDepartment(Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/departments');
     try {
@@ -214,7 +210,7 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(data),
       );
-      if (response.statusCode == 201 || response.statusCode == 200) { // (Chấp nhận cả 200 và 201)
+      if (response.statusCode == 201 || response.statusCode == 200) {
         return Department.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
         _handleApiError(response, 'Lỗi tạo khoa');
@@ -225,7 +221,6 @@ class ApiService {
     }
   }
 
-  /// Cập nhật khoa
   Future<Department> updateDepartment(int departmentId, Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/departments/$departmentId');
     try {
@@ -245,7 +240,6 @@ class ApiService {
     }
   }
 
-  /// Xóa khoa
   Future<void> deleteDepartment(int departmentId) async {
     final Uri url = Uri.parse('$baseUrl/departments/$departmentId');
     try {
@@ -264,16 +258,12 @@ class ApiService {
   // ===================================================
   // 🔬 QUẢN LÝ BỘ MÔN (DIVISION)
   // ===================================================
-
-  /// Tải TOÀN BỘ danh sách bộ môn (Dùng cho Phân trang Front-end)
   Future<List<Division>> fetchDivisions() async {
-    final Uri url = Uri.parse('$baseUrl/divisions'); // (Xóa page và query)
+    final Uri url = Uri.parse('$baseUrl/divisions');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
-
-        // (Logic tải danh sách đầy đủ, giống fetchDepartments)
         List<dynamic> dataList;
         if (body is List) {
           dataList = body;
@@ -283,7 +273,6 @@ class ApiService {
           throw Exception('Định dạng dữ liệu không hợp lệ');
         }
         return dataList.map((item) => Division.fromJson(item)).toList();
-
       } else {
         _handleApiError(response, 'Lỗi tải danh sách bộ môn');
       }
@@ -293,7 +282,6 @@ class ApiService {
     }
   }
 
-  /// Tải chi tiết 1 bộ môn
   Future<DivisionDetail> fetchDivisionDetails(int divisionId) async {
     final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
     try {
@@ -309,7 +297,6 @@ class ApiService {
     }
   }
 
-  /// Tạo mới bộ môn
   Future<Division> createDivision(Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/divisions');
     try {
@@ -318,7 +305,7 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(data),
       );
-      if (response.statusCode == 201 || response.statusCode == 200) { // (Chấp nhận cả 200)
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         return Division.fromJson(responseData);
       } else {
@@ -330,7 +317,6 @@ class ApiService {
     }
   }
 
-  /// Cập nhật bộ môn
   Future<Division> updateDivision(int divisionId, Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
     try {
@@ -351,7 +337,6 @@ class ApiService {
     }
   }
 
-  /// Xóa bộ môn
   Future<void> deleteDivision(int divisionId) async {
     final Uri url = Uri.parse('$baseUrl/divisions/$divisionId');
     try {
@@ -370,8 +355,6 @@ class ApiService {
   // ===================================================
   // 🔬 QUẢN LÝ NGÀNH HỌC (MAJOR)
   // ===================================================
-
-  /// Tải TOÀN BỘ danh sách ngành học (Đã sửa)
   Future<List<Major>> fetchMajors() async {
     final Uri url = Uri.parse('$baseUrl/majors');
     try {
@@ -379,13 +362,8 @@ class ApiService {
       if (response.statusCode == 200) {
         final dynamic body = jsonDecode(utf8.decode(response.bodyBytes));
         List<dynamic> dataList = (body is Map<String, dynamic> && body.containsKey('data')) ? body['data'] : (body is List ? body : []);
-
         List<Major> majors = dataList.map((item) => Major.fromJson(item)).toList();
-
-        // Sắp xếp theo tên ngành (A-Z) để khớp với model 'major.dart' của bạn
-
         return majors;
-
       } else {
         _handleApiError(response, 'Lỗi tải danh sách ngành học');
       }
@@ -394,7 +372,6 @@ class ApiService {
     }
   }
 
-  /// Tải chi tiết 1 ngành học
   Future<MajorDetail> fetchMajorDetails(int majorId) async {
     final Uri url = Uri.parse('$baseUrl/majors/$majorId');
     try {
@@ -410,7 +387,6 @@ class ApiService {
     }
   }
 
-  /// Tạo mới ngành học
   Future<Major> createMajor(Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/majors');
     try {
@@ -419,7 +395,6 @@ class ApiService {
         headers: _getHeaders(),
         body: jsonEncode(data),
       );
-      // API có thể trả về model Major (đã được cập nhật)
       if (response.statusCode == 201 || response.statusCode == 200) {
         return Major.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
@@ -431,7 +406,6 @@ class ApiService {
     }
   }
 
-  /// Cập nhật ngành học
   Future<Major> updateMajor(int majorId, Map<String, dynamic> data) async {
     final Uri url = Uri.parse('$baseUrl/majors/$majorId');
     try {
@@ -451,7 +425,6 @@ class ApiService {
     }
   }
 
-  /// Xóa ngành học
   Future<void> deleteMajor(int majorId) async {
     final Uri url = Uri.parse('$baseUrl/majors/$majorId');
     try {
@@ -463,6 +436,82 @@ class ApiService {
       }
     } catch (e) {
       print("deleteMajor Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  // ===================================================
+  // 🔬 QUẢN LÝ PHÒNG HỌC (ROOM) - (PHẦN MỚI)
+  // ===================================================
+
+  /// Tạo mới phòng học
+  Future<Room> createRoom(Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/rooms');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 201) {
+        return Room.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tạo phòng học');
+      }
+    } catch (e) {
+      print("createRoom Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Cập nhật phòng học
+  Future<Room> updateRoom(int roomId, Map<String, dynamic> data) async {
+    final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return Room.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi cập nhật phòng học');
+      }
+    } catch (e) {
+      print("updateRoom Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Xóa phòng học
+  Future<void> deleteRoom(int roomId) async {
+    final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
+    try {
+      final response = await http.delete(url, headers: _getHeaders());
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      } else {
+        _handleApiError(response, 'Lỗi xóa phòng học');
+      }
+    } catch (e) {
+      print("deleteRoom Lỗi: $e");
+      rethrow;
+    }
+  }
+
+  /// Tải chi tiết 1 phòng học
+  Future<RoomDetail> fetchRoomDetails(int roomId) async {
+    final Uri url = Uri.parse('$baseUrl/rooms/$roomId');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return RoomDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleApiError(response, 'Lỗi tải chi tiết phòng học');
+      }
+    } catch (e) {
+      print("fetchRoomDetails Lỗi: $e");
       rethrow;
     }
   }

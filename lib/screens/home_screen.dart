@@ -1,13 +1,14 @@
 // lib/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // Import để Đăng xuất
+import 'login_screen.dart';
 import '../screens/khoa_screen.dart';
 import '../screens/dashboard_content.dart';
-import '../table/user.dart'; // 👈 Sửa đường dẫn nếu cần
+import '../table/user.dart';
 import '../screens/lich_hoc_screen.dart';
 import '../screens/giang_vien_screen.dart';
-import '../screens/tai_khoan_screen.dart'; // 👈 1. IMPORT MÀN HÌNH TÀI KHOẢN
+import '../screens/tai_khoan_screen.dart';
+import '../screens/thong_ke_screen.dart'; // <<< 1. IMPORT MÀN HÌNH BÁO CÁO
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -163,20 +164,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO */ }),
+          // --- 👇 2. ĐÂY LÀ PHẦN ĐÃ SỬA ---
+          _buildMenuItem(
+            "THỐNG KÊ - BÁO CÁO",
+            "THONG_KE",
+            onTap: () => _onMenuItemSelected(
+              "THONG_KE",
+              "Hệ thống Thống kê Báo cáo", // Cập nhật tiêu đề cho AppBar
+              const ThongKeScreen(),       // Điều hướng đến màn hình mới
+            ),
+          ),
+          // --- 👆 KẾT THÚC PHẦN SỬA ---
           _buildMenuDivider(),
 
-          // --- 👇 2. ĐÂY LÀ PHẦN ĐÃ CHỈNH SỬA ---
           _buildMenuItem(
             "TÀI KHOẢN",
             "TAI_KHOAN",
             onTap: () => _onMenuItemSelected(
               "TAI_KHOAN",
-              "Quản lý Tài khoản", // Cập nhật tiêu đề cho AppBar
-              const TaiKhoanScreen(), // Điều hướng đến màn hình mới
+              "Quản lý Tài khoản",
+              const TaiKhoanScreen(),
             ),
           ),
-          // --- 👆 KẾT THÚC PHẦN CHỈNH SỬA ---
         ],
       ),
     );

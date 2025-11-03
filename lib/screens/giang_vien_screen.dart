@@ -1,5 +1,3 @@
-// file: lib/screens/giang_vien_screen.dart
-
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';

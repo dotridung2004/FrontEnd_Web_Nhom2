@@ -1,3 +1,5 @@
+// file: lib/models/schedule.dart
+
 import 'dart:convert';
 import 'package:intl/intl.dart'; // Import for parsing date
 
@@ -53,14 +55,16 @@ class Schedule {
     return Schedule(
       id: json['id'] ?? 0,
 
-      // Read directly from the keys provided by ScheduleController::index()
-      teacherName: json['teacherName'] ?? 'N/A',
-      classCode:   json['classCode'] ?? 'N/A',
-      courseName:  json['courseName'] ?? 'N/A',
-      semester:    json['semester'] ?? 'N/A',
-      roomName:    json['roomName'] ?? 'N/A',
+      // <<< SỬA LỖI: Đọc key snake_case từ backend >>>
+      teacherName: json['teacher_name'] ?? 'N/A', // Sửa từ 'teacherName'
+      classCode:   json['class_code'] ?? 'N/A',   // Sửa từ 'classCode'
+      courseName:  json['course_name'] ?? 'N/A',  // Sửa từ 'courseName'
+      semester:    json['semester'] ?? 'N/A',    // (Key này đã đúng)
+      roomName:    json['room_name'] ?? 'N/A',    // Sửa từ 'roomName'
+      // <<< KẾT THÚC SỬA LỖI >>>
 
       // --- NEW: Parse fields needed for the form ---
+      // (Các key này đã đúng)
       classCourseAssignmentId: json['class_course_assignment_id'] as int?,
       roomId:                  json['room_id'] as int?,
       date:                    parseDate(json['date']), // Parse the date string

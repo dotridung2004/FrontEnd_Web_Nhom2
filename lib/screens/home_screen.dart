@@ -2,13 +2,21 @@
 
 import 'package:flutter/material.dart';
 import 'login_screen.dart'; // Import để Đăng xuất
-import '../screens/khoa_screen.dart';
-import '../screens/dashboard_content.dart';
 import '../table/user.dart';
-import '../screens/lich_hoc_screen.dart';
+
+// Import tất cả các màn hình từ cả hai tệp
+import '../screens/dashboard_content.dart';
+import '../screens/khoa_screen.dart';
 import '../screens/giang_vien_screen.dart';
+import '../screens/lich_hoc_screen.dart';
 import '../screens/tai_khoan_screen.dart';
-import '../screens/duyet_yeu_cau_screen.dart'; // 👈 THÊM 1: Import màn hình mới
+import '../screens/duyet_yeu_cau_screen.dart';
+import '../screens/hoc_phan_screen.dart';
+import '../screens/lop_hoc_phan_screen.dart';
+import '../screens/registered_course_screen.dart';
+import '../screens/room_screen.dart';
+import '../screens/major_screen.dart';
+import '../screens/division_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -26,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color screenBg = Color(0xFFF0F4F8);
   final Color logoutRed = Color(0xFFD32F2F);
 
+  // Quản lý trạng thái theo Index (Từ Tệp 1)
   int _selectedIndex = 0;
   String _selectedTitle = "Trang chủ";
   String _selectedMenuKey = "TRANG_CHU";
@@ -36,19 +45,36 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // 👈 THÊM 2: Thêm màn hình mới vào danh sách
+    // Danh sách màn hình gộp từ cả 2 tệp
     _mainScreens = [
+      // Trang chủ
       DashboardContent(user: widget.user), // Index 0
+
+      // Danh mục (Gộp)
       const KhoaScreen(),                   // Index 1
-      const GiangVienScreen(),              // Index 2
-      const LichHocScreen(),                // Index 3
-      const DuyetYeuCauScreen(),            // Index 4  <- MÀN HÌNH MỚI
+      const DivisionScreen(),               // Index 2 (Từ Tệp 2)
+      const MajorScreen(),                  // Index 3 (Từ Tệp 2)
+      const RoomScreen(),                   // Index 4 (Từ Tệp 2)
+
+      // Học phần (Từ Tệp 2)
+      const HocPhanScreen(),                // Index 5 (Từ Tệp 2)
+      const LopHocPhanScreen(),             // Index 6 (Từ Tệp 2)
+      const RegisteredCourseScreen(),       // Index 7 (Từ Tệp 2)
+
+      // Quản lý (Từ Tệp 1)
+      const GiangVienScreen(),              // Index 8
+      const LichHocScreen(),                // Index 9
+      const DuyetYeuCauScreen(),            // Index 10
+
       // TODO: Thêm màn hình Thống kê
-      // const ThongKeScreen(),             // Index 5
-      const TaiKhoanScreen(),               // Index 6  <- CẬP NHẬT INDEX
+      // const ThongKeScreen(),             // Index 11
+
+      // Hệ thống
+      const TaiKhoanScreen(),               // Index 11 (Cập nhật Index)
     ];
   }
 
+  // Hàm điều hướng theo Index (Từ Tệp 1)
   void _onMenuItemSelected(String key, String title, int index) {
     if (index < 0 || index >= _mainScreens.length) return;
     setState(() {
@@ -94,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Scaffold(
             backgroundColor: screenBg,
             appBar: _buildTopAppBar(isMobile: false, title: _selectedTitle),
-            body: IndexedStack(
+            body: IndexedStack( // Dùng IndexedStack (Từ Tệp 1)
               index: _selectedIndex,
               children: _mainScreens,
             ),
@@ -109,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: screenBg,
       appBar: _buildTopAppBar(isMobile: true, title: _selectedTitle),
       drawer: _buildSideMenu(),
-      body: IndexedStack(
+      body: IndexedStack( // Dùng IndexedStack (Từ Tệp 1)
         index: _selectedIndex,
         children: _mainScreens,
       ),
@@ -123,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Header TLU
+          // Header TLU (Chung)
           Container(
             padding: EdgeInsets.all(20.0).copyWith(top: 40.0, bottom: 30.0),
             child: Row(
@@ -146,48 +172,58 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _buildMenuDivider(),
 
-          // 👈 THÊM 3: Thêm mục menu mới và cập nhật index
+          // --- Menu gộp (với index đã cập nhật) ---
+
           _buildMenuItem(
             "TRANG CHỦ", "TRANG_CHU",
             onTap: () => _onMenuItemSelected("TRANG_CHU", "Trang chủ", 0),
           ),
+
           _buildExpansionMenuItem("DANH MỤC", "DANH_MUC", children: [
-            _buildMenuItem("Khoa", "KHOA", onTap: () => _onMenuItemSelected("KHOA", "Khoa", 1)),
-            _buildMenuItem("Bộ môn", "BO_MON", onTap: () { /* TODO: Cập nhật index khi có màn hình */ }),
-            _buildMenuItem("Ngành học", "NGANH_HOC", onTap: () { /* TODO: Cập nhật index khi có màn hình */ }),
-            _buildMenuItem("Phòng học", "PHONG_HOC", onTap: () { /* TODO: Cập nhật index khi có màn hình */ }),
+            _buildMenuItem("Khoa", "KHOA",
+                onTap: () => _onMenuItemSelected("KHOA", "Khoa", 1)),
+            _buildMenuItem("Bộ môn", "BO_MON",
+                onTap: () => _onMenuItemSelected("BO_MON", "Bộ môn", 2)), // (Từ Tệp 2)
+            _buildMenuItem("Ngành học", "NGANH_HOC",
+                onTap: () => _onMenuItemSelected("NGANH_HOC", "Ngành học", 3)), // (Từ Tệp 2)
+            _buildMenuItem("Phòng học", "PHONG_HOC",
+                onTap: () => _onMenuItemSelected("PHONG_HOC", "Phòng học", 4)), // (Từ Tệp 2)
           ]),
+
           _buildExpansionMenuItem("HỌC PHẦN", "HOC_PHAN", children: [
-            _buildMenuItem("Học phần", "HP", onTap: () { /* TODO */ }),
-            _buildMenuItem("Lớp học phần", "LHP", onTap: () { /* TODO */ }),
-            _buildMenuItem("Học phần đã đăng ký", "HP_DK", onTap: () { /* TODO */ }),
+            _buildMenuItem("Học phần", "HP",
+                onTap: () => _onMenuItemSelected("HP", "Học phần", 5)), // (Từ Tệp 2)
+            _buildMenuItem("Lớp học phần", "LHP",
+                onTap: () => _onMenuItemSelected("LHP", "Lớp học phần", 6)), // (Từ Tệp 2)
+            _buildMenuItem("Học phần đã đăng ký", "HP_DK",
+                onTap: () => _onMenuItemSelected("HP_DK", "Học phần đã đăng ký", 7)), // (Từ Tệp 2)
           ]),
 
           _buildMenuItem(
             "GIẢNG VIÊN",
             "GIANG_VIEN",
-            onTap: () => _onMenuItemSelected("GIANG_VIEN", "Giảng viên", 2),
+            onTap: () => _onMenuItemSelected("GIANG_VIEN", "Giảng viên", 8), // (Index 8)
           ),
 
           _buildMenuItem(
             "LỊCH HỌC",
             "LICH_HOC",
-            onTap: () => _onMenuItemSelected("LICH_HOC", "Lịch học", 3),
+            onTap: () => _onMenuItemSelected("LICH_HOC", "Lịch học", 9), // (Index 9)
           ),
 
-          // --- MỤC MỚI ---
           _buildMenuItem(
             "DUYỆT YÊU CẦU",
             "DUYET_YEU_CAU",
             onTap: () => _onMenuItemSelected(
               "DUYET_YEU_CAU",
               "Duyệt yêu cầu nghỉ/bù",
-              4, // Index 4 (mới)
+              10, // (Index 10)
             ),
           ),
-          // --- KẾT THÚC MỤC MỚI ---
 
-          _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE", onTap: () { /* TODO: Cập nhật index khi có màn hình */ }),
+          _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE",
+              onTap: () { /* TODO: Cập nhật index khi có màn hình */ }
+          ),
           _buildMenuDivider(),
 
           _buildMenuItem(
@@ -196,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => _onMenuItemSelected(
               "TAI_KHOAN",
               "Quản lý Tài khoản",
-              5, // <<< CẬP NHẬT INDEX (từ 4 lên 5)
+              11, // (Index 11)
             ),
           ),
         ],
@@ -256,14 +292,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))
               ),
-              child: Text("Đăng xuất")
+              child: Text("Đăng xuất") // (Text Tiếng Việt từ cả 2 tệp)
           ),
         ),
       ],
     );
   }
 
-  // --- Helper Widgets cho Menu (Giữ nguyên) ---
+  // --- Helper Widgets cho Menu (Giữ nguyên từ Tệp 1) ---
   Widget _buildMenuItem(String title, String key, {VoidCallback? onTap}) {
     final bool isSelected = (_selectedMenuKey == key);
     return Container(

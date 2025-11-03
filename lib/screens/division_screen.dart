@@ -1,23 +1,22 @@
-// File: lib/screens/khoa_screen.dart
 import 'package:flutter/material.dart';
 import '../api_service.dart';
-import '../models/department.dart';
-import '../models/department_detail.dart'; // (Import)
-import '../table/user.dart';             // (Import)
-import '../models/major.dart';
 import '../models/division.dart';
-import 'dart:async'; // Cho debounce
-import 'package:collection/collection.dart'; // Cho firstWhereOrNull
-import 'dart:math'; // Cho hàm min()
+import '../models/department.dart'; // Import Department để dùng trong Dropdown
+import '../models/course.dart';    // Import Course để xem chi tiết
+import '../table/user.dart';       // Import User để xem chi tiết
+import '../models/division_detail.dart'; // Import model chi tiết
+import 'dart:async'; // Import để sử dụng Timer (cho debounce)
+import 'package:collection/collection.dart'; // Import collection
+import 'dart:math'; // Import cho hàm min
 
-class KhoaScreen extends StatefulWidget {
-  const KhoaScreen({Key? key}) : super(key: key);
+class DivisionScreen extends StatefulWidget {
+  const DivisionScreen({Key? key}) : super(key: key);
 
   @override
-  _KhoaScreenState createState() => _KhoaScreenState();
+  _DivisionScreenState createState() => _DivisionScreenState();
 }
 
-class _KhoaScreenState extends State<KhoaScreen> {
+class _DivisionScreenState extends State<DivisionScreen> {
   // --- Màu sắc ---
   final Color tluBlue = const Color(0xFF005A9C);
   final Color iconViewColor = Colors.blue;
@@ -28,19 +27,20 @@ class _KhoaScreenState extends State<KhoaScreen> {
 
   final ApiService _apiService = ApiService();
 
-  List<User> _teachers = [];
-  bool _isLoadingTeachers = false;
+  // State cho Dropdown Khoa
+  List<Department> _departments = [];
+  bool _isLoadingDepartments = false;
 
   // --- State cho Phân trang và Tìm kiếm (FRONT-END) ---
-  List<Department> _allDepartments = [];
-  List<Department> _filteredDepartments = [];
-  List<Department> _pagedDepartments = [];
+  List<Division> _allDivisions = []; // Danh sách đầy đủ
+  List<Division> _filteredDivisions = []; // Danh sách đã lọc
+  List<Division> _pagedDivisions = []; // Danh sách hiển thị trên trang
 
   int _currentPage = 1;
   int _lastPage = 1;
   int _totalItems = 0;
-  final int _rowsPerPage = 10;
-  bool _isLoading = true;
+  final int _rowsPerPage = 10; // Cố định 10 hàng/trang
+  bool _isLoading = true; // Cờ loading chính
   String _currentSearchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
@@ -61,24 +61,28 @@ class _KhoaScreenState extends State<KhoaScreen> {
     super.dispose();
   }
 
+  // Hàm tải dữ liệu ban đầu
   Future<void> _loadInitialData() async {
     if (mounted) setState(() { _isLoading = true; });
 
     try {
-      final teachersFuture = _fetchTeachers();
-      final departmentsFuture = _apiService.fetchDepartments();
+      // Tải song song Khoa (cho dropdown) và Bộ môn (danh sách chính)
+      final departmentsFuture = _fetchDepartments();
+      // 👇 **** SỬA ĐỔI: Gọi hàm fetchDivisions mới **** 👇
+      final divisionsFuture = _apiService.fetchDivisions();
 
-      final results = await Future.wait([teachersFuture, departmentsFuture]);
+      final results = await Future.wait([departmentsFuture, divisionsFuture]);
 
-      final teachers = results[0] as List<User>;
-      final departments = results[1] as List<Department>;
+      final departments = results[0] as List<Department>;
+      final divisions = results[1] as List<Division>;
 
       if (mounted) {
         setState(() {
-          _teachers = teachers;
-          _allDepartments = departments;
-          _filteredDepartments = departments;
-          _updatePagination(departments);
+          _departments = departments;
+          // Sắp xếp danh sách (ví dụ: mới nhất lên đầu)
+          _allDivisions = divisions;
+          _filteredDivisions = divisions;
+          _updatePagination(divisions); // Cập nhật phân trang
         });
       }
     } catch (e) {
@@ -92,63 +96,63 @@ class _KhoaScreenState extends State<KhoaScreen> {
     }
   }
 
-  Future<List<User>> _fetchTeachers() async {
-    if (mounted) setState(() { _isLoadingTeachers = true; });
+  // Hàm tải danh sách khoa (cho dropdown)
+  Future<List<Department>> _fetchDepartments() async {
+    if (mounted) setState(() { _isLoadingDepartments = true; });
     try {
-      // ⚠️ LƯU Ý: Bạn cần tạo hàm API 'fetchAllTeachers'
-      // final teachers = await _apiService.fetchAllTeachers();
-
-      // (Sửa mock data để khớp với model User thật từ 'table/user.dart')
-      await Future.delayed(Duration(milliseconds: 100));
-      final teachers = [
-        User(id: 1, name: 'Nguyễn Văn A', firstName: 'Nguyễn Văn', lastName: 'A', email: 'a@tlu.edu.vn', status: 'active', role: 'teacher', phoneNumber: '0123456789'),
-        User(id: 2, name: 'Trần Thị B', firstName: 'Trần Thị', lastName: 'B', email: 'b@tlu.edu.vn', status: 'active', role: 'teacher', phoneNumber: '0987654321'),
-      ];
-
-      if (mounted) setState(() { _isLoadingTeachers = false; });
-      return teachers;
+      final departments = await _apiService.fetchDepartments();
+      if (mounted) setState(() { _isLoadingDepartments = false; });
+      return departments;
     } catch (e) {
-      if (mounted) setState(() { _isLoadingTeachers = false; });
-      _showSnackBar('Lỗi tải danh sách giảng viên: $e', isError: true);
+      if (mounted) setState(() { _isLoadingDepartments = false; });
+      _showSnackBar('Lỗi tải danh sách khoa: $e', isError: true);
       return [];
     }
   }
 
-  void _refreshDepartmentList({bool clearSearch = false}) {
+  // Hàm refresh (tải lại toàn bộ)
+  // 👇 **** SỬA ĐỔI: Đổi tên hàm và logic **** 👇
+  void _refreshDivisionList({bool clearSearch = false}) {
     if (clearSearch) {
       _currentSearchQuery = '';
       _searchController.clear();
     }
-    _loadInitialData();
+    _loadInitialData(); // Tải lại tất cả từ đầu
   }
 
   // --- Hàm xử lý Phân trang & Tìm kiếm (FRONT-END) ---
+
+  // (Hàm này được gọi bởi Debounce)
   void _onSearchChanged() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       _currentSearchQuery = _searchController.text;
-      _filterAndPaginateList();
+      _filterAndPaginateList(); // (Gọi hàm lọc)
     });
   }
 
+  // (Hàm mới: Lọc danh sách)
   void _filterAndPaginateList() {
     if (!mounted) return;
     setState(() {
+      // 1. Lọc
       if (_currentSearchQuery.isEmpty) {
-        _filteredDepartments = List.from(_allDepartments);
+        _filteredDivisions = List.from(_allDivisions);
       } else {
         final query = _currentSearchQuery.toLowerCase();
-        _filteredDepartments = _allDepartments.where((dept) {
-          return dept.name.toLowerCase().contains(query) ||
-              dept.code.toLowerCase().contains(query) ||
-              dept.headTeacherName.toLowerCase().contains(query);
+        _filteredDivisions = _allDivisions.where((division) {
+          return division.name.toLowerCase().contains(query) ||
+              division.code.toLowerCase().contains(query) ||
+              division.departmentName.toLowerCase().contains(query);
         }).toList();
       }
-      _updatePagination(_filteredDepartments, goToFirstPage: true);
+      // 2. Cập nhật phân trang
+      _updatePagination(_filteredDivisions, goToFirstPage: true);
     });
   }
 
-  void _updatePagination(List<Department> list, {bool goToFirstPage = false}) {
+  // (Hàm mới: Cập nhật biến phân trang)
+  void _updatePagination(List<Division> list, {bool goToFirstPage = false}) {
     if (!mounted) return;
     setState(() {
       _totalItems = list.length;
@@ -161,31 +165,35 @@ class _KhoaScreenState extends State<KhoaScreen> {
         if (_currentPage > _lastPage) _currentPage = _lastPage;
       }
 
+      // 3. Lấy danh sách cho trang hiện tại
       int startIndex = (_currentPage - 1) * _rowsPerPage;
       int endIndex = min(startIndex + _rowsPerPage, _totalItems);
 
-      _pagedDepartments = (startIndex < _totalItems)
+      _pagedDivisions = (startIndex < _totalItems)
           ? list.sublist(startIndex, endIndex)
           : [];
     });
   }
 
+  // (Hàm mới: Chuyển trang)
   void _goToPage(int page) {
     if (page < 1 || page > _lastPage || page == _currentPage) return;
     if (mounted) {
       setState(() {
         _currentPage = page;
-        _updatePagination(_filteredDepartments);
+        _updatePagination(_filteredDivisions); // Cập nhật lại ds trang
       });
     }
   }
+  // --- Kết thúc Phân trang & Tìm kiếm ---
 
   @override
   Widget build(BuildContext context) {
-    return _buildContent(context, _pagedDepartments);
+    // 👇 **** SỬA ĐỔI: Dùng _pagedDivisions **** 👇
+    return _buildContent(context, _pagedDivisions);
   }
 
-  Widget _buildContent(BuildContext context, List<Department> departmentsToDisplay) {
+  Widget _buildContent(BuildContext context, List<Division> divisionsToDisplay) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -196,9 +204,9 @@ class _KhoaScreenState extends State<KhoaScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               ElevatedButton.icon(
-                onPressed: _isLoadingTeachers ? null : () => _showAddEditDepartmentDialog(null),
+                onPressed: _isLoadingDepartments ? null : () => _showAddEditDivisionDialog(null),
                 icon: Icon(Icons.add, color: Colors.white, size: 20),
-                label: Text("Thêm khoa", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                label: Text("Thêm bộ môn", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: tluBlue,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -210,7 +218,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: "Tìm kiếm theo tên, mã, trưởng khoa...",
+                    hintText: "Tìm kiếm theo tên, mã, khoa...",
                     prefixIcon: Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
@@ -250,16 +258,17 @@ class _KhoaScreenState extends State<KhoaScreen> {
                           headingTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           columns: const [
                             DataColumn(label: Text('STT')),
-                            DataColumn(label: Text('Mã khoa')),
-                            DataColumn(label: Text('Tên khoa')),
-                            DataColumn(label: Text('Trưởng khoa')),
+                            // (Thêm lại cột Mã bộ môn)
+                            DataColumn(label: Text('Mã bộ môn')),
+                            DataColumn(label: Text('Tên bộ môn')),
+                            DataColumn(label: Text('Khoa')),
                             DataColumn(label: Text('Số lượng GV')),
-                            DataColumn(label: Text('Số lượng ngành')),
                             DataColumn(label: Text('Thao tác')),
                           ],
                           rows: List.generate(
-                            departmentsToDisplay.length,
-                                (index) => _buildDataRow(index + 1 + (_currentPage - 1) * _rowsPerPage, departmentsToDisplay[index]),
+                            divisionsToDisplay.length,
+                            // (Tính STT theo trang)
+                                (index) => _buildDataRow(index + 1 + (_currentPage - 1) * _rowsPerPage, divisionsToDisplay[index]),
                           ),
                         ),
                       ),
@@ -272,16 +281,17 @@ class _KhoaScreenState extends State<KhoaScreen> {
               );
             }),
           ),
-          if (!_isLoading && departmentsToDisplay.isEmpty)
+          if (!_isLoading && divisionsToDisplay.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 20.0),
-              child: Center(child: Text(_currentSearchQuery.isEmpty ? 'Chưa có khoa nào.' : 'Không tìm thấy kết quả.')),
+              child: Center(child: Text(_currentSearchQuery.isEmpty ? 'Chưa có bộ môn nào.' : 'Không tìm thấy kết quả.')),
             ),
         ],
       ),
     );
   }
 
+  // (Bộ điều khiển phân trang - Sửa logic)
   Widget _buildPaginationControls() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -293,6 +303,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
             children: [
               IconButton(
                 icon: Icon(Icons.first_page),
+                // 👇 **** SỬA ĐỔI: Gọi _goToPage **** 👇
                 onPressed: _currentPage > 1 ? () => _goToPage(1) : null,
                 tooltip: 'Trang đầu',
               ),
@@ -319,32 +330,33 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-  DataRow _buildDataRow(int stt, Department department) {
+
+  DataRow _buildDataRow(int stt, Division division) {
     return DataRow(
       cells: [
         DataCell(Text(stt.toString())),
-        DataCell(Text(department.code)),
-        DataCell(Text(department.name)),
-        DataCell(Text(department.headTeacherName)),
-        DataCell(Text(department.teacherCount.toString())),
-        DataCell(Text(department.majorsCount.toString())),
+        // (Thêm lại cột Mã bộ môn)
+        DataCell(Text(division.code)),
+        DataCell(Text(division.name)),
+        DataCell(Text(division.departmentName)),
+        DataCell(Text(division.teacherCount.toString())),
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: Icon(Icons.info_outline, color: iconViewColor),
-                onPressed: () => _showViewDepartmentDialog(department),
+                onPressed: () => _showViewDivisionDialog(division),
                 tooltip: "Xem",
               ),
               IconButton(
                 icon: Icon(Icons.edit_outlined, color: iconEditColor),
-                onPressed: _isLoadingTeachers ? null : () => _showAddEditDepartmentDialog(department),
+                onPressed: _isLoadingDepartments ? null : () => _showAddEditDivisionDialog(division),
                 tooltip: "Sửa",
               ),
               IconButton(
                 icon: Icon(Icons.delete_outline, color: iconDeleteColor),
-                onPressed: () => _showDeleteConfirmationDialog(department),
+                onPressed: () => _showDeleteConfirmationDialog(division),
                 tooltip: "Xóa",
               ),
             ],
@@ -355,32 +367,28 @@ class _KhoaScreenState extends State<KhoaScreen> {
   }
 
   /// ---------------------------------------------------
-  /// DIALOG XEM CHI TIẾT KHOA (Pop-up)
+  /// DIALOG XEM CHI TIẾT BỘ MÔN (Pop-up)
+  /// (Đã sửa lại cấu trúc)
   /// ---------------------------------------------------
-  void _showViewDepartmentDialog(Department department) {
+  void _showViewDivisionDialog(Division division) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           titlePadding: const EdgeInsets.all(0),
-          title: _buildDialogHeader('Thông Tin Khoa'),
+          title: _buildDialogHeader('Thông Tin Bộ Môn'),
           contentPadding: const EdgeInsets.all(0),
           content: Container(
             width: MediaQuery.of(context).size.width * 0.7,
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.7,
             ),
-            child: FutureBuilder<DepartmentDetail>(
-              future: _apiService.fetchDepartmentDetails(department.id),
+            child: FutureBuilder<DivisionDetail>(
+              future: _apiService.fetchDivisionDetails(division.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
+                  return Center(child: Padding(padding: const EdgeInsets.all(32.0), child: CircularProgressIndicator()));
                 }
                 if (snapshot.hasError) {
                   return SingleChildScrollView(
@@ -390,15 +398,9 @@ class _KhoaScreenState extends State<KhoaScreen> {
                       children: [
                         Icon(Icons.error_outline, color: Colors.red, size: 48),
                         SizedBox(height: 16),
-                        Text(
-                          "Lỗi tải chi tiết",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
+                        Text("Lỗi tải chi tiết", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         SizedBox(height: 8),
-                        Text(
-                          "Không thể tải dữ liệu chi tiết cho khoa này.\nLỗi: ${snapshot.error}",
-                          textAlign: TextAlign.center,
-                        ),
+                        Text("Lỗi: ${snapshot.error}", textAlign: TextAlign.center),
                       ],
                     ),
                   );
@@ -406,24 +408,15 @@ class _KhoaScreenState extends State<KhoaScreen> {
                 if (snapshot.hasData) {
                   return _buildDetailContent(snapshot.data!);
                 }
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Text("Không có dữ liệu."),
-                  ),
-                );
+                return Center(child: Padding(padding: const EdgeInsets.all(32.0), child: Text("Không có dữ liệu chi tiết.")));
               },
             ),
           ),
           actionsPadding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           actions: <Widget>[
             ElevatedButton(
-              child: Text('Quay lại'),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: tluBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
-              ),
+              child: Text('Quay lại'), // (Đổi nút 'Xác nhận' thành 'Quay lại')
+              style: ElevatedButton.styleFrom(backgroundColor: tluBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -433,27 +426,44 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-  Widget _buildDetailContent(DepartmentDetail detail) {
+  // (Các hàm helper cho dialog XEM - Giữ nguyên)
+  Widget _buildDetailContent(DivisionDetail detail) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildSectionTitle('Thông tin cơ bản'),
-          _buildReadOnlyInfo(detail.department),
-          Divider(height: 32),
+          _buildSectionTitle("Thông tin cơ bản"),
+          SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildReadOnlyField("Mã bộ môn:", detail.code)),
+              SizedBox(width: 16),
+              Expanded(child: _buildReadOnlyField("Tên bộ môn:", detail.name)),
+            ],
+          ),
+          SizedBox(height: 16),
+          _buildReadOnlyField("Khoa:", detail.departmentName),
+          SizedBox(height: 16),
+          _buildReadOnlyField("Mô tả:", detail.description ?? 'Chưa có mô tả', isMultiLine: true),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildReadOnlyField("Số lượng giảng viên:", detail.teacherCount.toString())),
+              SizedBox(width: 16),
+              Expanded(child: _buildReadOnlyField("Số lượng môn học:", detail.courseCount.toString())),
+            ],
+          ),
 
-          _buildSectionTitle('Danh sách giảng viên (${detail.teachers.length})'),
-          _buildTeacherTable(detail.teachers),
           Divider(height: 32),
+          _buildSectionTitle("Danh sách giảng viên (${detail.teachersList.length})"),
+          _buildTeacherTable(detail.teachersList),
 
-          _buildSectionTitle('Danh sách ngành (${detail.majors.length})'),
-          _buildMajorList(detail.majors),
           Divider(height: 32),
-
-          _buildSectionTitle('Danh sách bộ môn (${detail.divisions.length})'),
-          _buildDivisionTable(detail.divisions),
+          _buildSectionTitle("Danh sách môn học (${detail.coursesList.length})"),
+          _buildCourseTable(detail.coursesList),
         ],
       ),
     );
@@ -461,33 +471,6 @@ class _KhoaScreenState extends State<KhoaScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: tluBlue));
-  }
-
-  Widget _buildReadOnlyInfo(Department dept) {
-    return Column(
-      children: [
-        SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildReadOnlyField("Mã khoa:", dept.code)),
-            SizedBox(width: 16),
-            Expanded(child: _buildReadOnlyField("Tên khoa:", dept.name)),
-          ],
-        ),
-        SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildReadOnlyField("Số lượng giảng viên:", dept.teacherCount.toString())),
-            SizedBox(width: 16),
-            Expanded(child: _buildReadOnlyField("Số lượng ngành:", dept.majorsCount.toString())),
-          ],
-        ),
-        SizedBox(height: 16),
-        _buildReadOnlyField("Mô tả:", dept.description ?? 'Chưa có mô tả', isMultiLine: true),
-      ],
-    );
   }
 
   Widget _buildReadOnlyField(String label, String value, {bool isMultiLine = false}) {
@@ -498,14 +481,14 @@ class _KhoaScreenState extends State<KhoaScreen> {
         SizedBox(height: 4),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(12),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMultiLine ? 12 : 10),
           constraints: BoxConstraints(minHeight: isMultiLine ? 80 : 40),
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: Text(value.isNotEmpty ? value : '(trống)'),
+          child: Text(value.isNotEmpty ? value : '(trống)', style: TextStyle(color: value.isNotEmpty ? Colors.black87 : Colors.grey)),
         ),
       ],
     );
@@ -519,64 +502,44 @@ class _KhoaScreenState extends State<KhoaScreen> {
         headingRowColor: MaterialStateProperty.all(Colors.grey[200]),
         columns: const [
           DataColumn(label: Text('STT')),
-          DataColumn(label: Text('Mã GV')),
+          DataColumn(label: Text('Mã giảng viên')),
           DataColumn(label: Text('Họ tên')),
           DataColumn(label: Text('Email')),
+          DataColumn(label: Text('SĐT')),
         ],
         rows: List.generate(teachers.length, (index) {
           final teacher = teachers[index];
           return DataRow(cells: [
             DataCell(Text((index + 1).toString())),
-            // 👇 **** SỬA LỖI teacher.code **** 👇
             DataCell(Text('GV${teacher.id.toString().padLeft(3,'0')}')),
-            // 👆 **** KẾT THÚC SỬA LỖI **** 👆
             DataCell(Text(teacher.name)),
             DataCell(Text(teacher.email)),
+            DataCell(Text(teacher.phoneNumber ?? 'N/A')), // (Sửa lỗi 'phoneNumber')
           ]);
         }),
       ),
     );
   }
 
-  Widget _buildMajorList(List<Major> majors) {
-    if (majors.isEmpty) return Text('Không có ngành học.');
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: majors.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(majors[index].name, style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(majors[index].code ?? 'N/A'),
-          );
-        },
-        separatorBuilder: (context, index) => Divider(height: 1),
-      ),
-    );
-  }
-
-  Widget _buildDivisionTable(List<Division> divisions) {
-    if (divisions.isEmpty) return Text('Không có bộ môn.');
+  Widget _buildCourseTable(List<Course> courses) {
+    if (courses.isEmpty) return Text('Không có môn học.');
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
         headingRowColor: MaterialStateProperty.all(Colors.grey[200]),
         columns: const [
           DataColumn(label: Text('STT')),
-          DataColumn(label: Text('Mã BM')),
-          DataColumn(label: Text('Tên bộ môn')),
+          DataColumn(label: Text('Mã MH')),
+          DataColumn(label: Text('Tên môn học')),
+          DataColumn(label: Text('Số tín chỉ')),
         ],
-        rows: List.generate(divisions.length, (index) {
-          final division = divisions[index];
+        rows: List.generate(courses.length, (index) {
+          final course = courses[index];
           return DataRow(cells: [
             DataCell(Text((index + 1).toString())),
-            DataCell(Text(division.code)),
-            DataCell(Text(division.name)),
+            DataCell(Text(course.code)),
+            DataCell(Text(course.name)),
+            DataCell(Text(course.credits.toString())),
           ]);
         }),
       ),
@@ -585,46 +548,56 @@ class _KhoaScreenState extends State<KhoaScreen> {
 
 
   /// ---------------------------------------------------
-  /// DIALOG THÊM / CHỈNH SỬA KHOA (Pop-up)
+  /// DIALOG THÊM / CHỈNH SỬA BỘ MÔN (Pop-up)
+  /// (Giữ nguyên logic)
   /// ---------------------------------------------------
-  void _showAddEditDepartmentDialog(Department? department) {
-    final bool isEdit = department != null;
+  void _showAddEditDivisionDialog(Division? division) {
+    final bool isEdit = division != null;
     final _formKey = GlobalKey<FormState>();
+    final _nameController = TextEditingController(text: isEdit ? division!.name : '');
+    final _descController = TextEditingController();
+    Department? _selectedDepartment;
+    Future<void>? _detailsLoadingFuture;
+    final _codeControllerForAdd = TextEditingController();
 
-    final _nameController = TextEditingController(text: isEdit ? department?.name ?? '' : '');
-    final _codeController = TextEditingController(text: isEdit ? department?.code ?? '' : '');
-    final _descController = TextEditingController(text: isEdit ? department?.description ?? '' : '');
-
-    User? _selectedTeacher;
-
-    if (isEdit) {
-      _selectedTeacher = _teachers.firstWhereOrNull(
-              (t) => t.id == department?.headId
+    if(isEdit) {
+      _detailsLoadingFuture = _apiService.fetchDivisionDetails(division!.id).then((details) {
+        if (mounted) {
+          _descController.text = details.description ?? '';
+          _selectedDepartment = _departments.firstWhereOrNull(
+                  (d) => d.name == details.departmentName
+          );
+        }
+      }).catchError((error) { /*...*/ });
+    }
+    if (isEdit && _departments.isNotEmpty) {
+      _selectedDepartment = _departments.firstWhereOrNull(
+              (d) => d.name == division!.departmentName
       );
     }
 
     bool _isSaving = false;
 
-    Future<void> _saveDepartment(VoidCallback onSavingStateChange) async {
+    Future<void> _saveDivision(VoidCallback onSavingStateChange) async {
       if (_formKey.currentState!.validate()) {
         onSavingStateChange();
         final data = {
           'name': _nameController.text,
-          'code': _codeController.text,
-          'head_id': _selectedTeacher?.id,
+          'department_id': _selectedDepartment?.id,
           'description': _descController.text,
+          if (!isEdit) 'code': _codeControllerForAdd.text,
         };
 
         try {
           if (isEdit) {
-            await _apiService.updateDepartment(department!.id, data);
+            await _apiService.updateDivision(division!.id, data);
           } else {
-            await _apiService.createDepartment(data);
+            await _apiService.createDivision(data);
           }
           if (!mounted) return;
-          _showSnackBar(isEdit ? 'Cập nhật khoa thành công!' : 'Thêm khoa thành công!', isError: false);
+          _showSnackBar(isEdit ? 'Cập nhật bộ môn thành công!' : 'Thêm bộ môn thành công!', isError: false);
           Navigator.of(context).pop();
-          _refreshDepartmentList(clearSearch: !isEdit);
+          _refreshDivisionList(clearSearch: !isEdit); // (Sửa logic refresh)
         }catch (e) {
           if (!mounted) return;
           _showSnackBar('Lỗi: $e', isError: true);
@@ -632,25 +605,36 @@ class _KhoaScreenState extends State<KhoaScreen> {
         }
       }
     }
-
     Future<bool> _showExitConfirmationDialog() async {
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
           title: Center(child: Text('Thông báo!', style: TextStyle(fontWeight: FontWeight.bold))),
-          content: Text(isEdit ? 'Bạn có muốn thoát khỏi chức năng sửa thông tin?' : 'Bạn có muốn thoát khỏi chức năng thêm mới?', textAlign: TextAlign.center),
+          content: Text(
+            isEdit ? 'Bạn có muốn thoát khỏi chức năng sửa thông tin bộ môn?' : 'Bạn có muốn thoát khỏi chức năng thêm thông tin bộ môn mới?',
+            textAlign: TextAlign.center,
+          ),
           actionsAlignment: MainAxisAlignment.center,
           actions: <Widget>[
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: Text('Hủy'),
-              style: OutlinedButton.styleFrom(foregroundColor: cancelColor, side: BorderSide(color: cancelColor), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cancelColor, side: BorderSide(color: cancelColor),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
+            SizedBox(width: 10),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               child: Text('Xác nhận'),
-              style: ElevatedButton.styleFrom(backgroundColor: confirmColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: confirmColor, foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
         ),
@@ -664,47 +648,71 @@ class _KhoaScreenState extends State<KhoaScreen> {
       builder: (BuildContext context) {
         return StatefulBuilder(
             builder: (context, setDialogState) {
+              Widget formContent = FutureBuilder(
+                  future: _detailsLoadingFuture,
+                  builder: (context, snapshot) {
+                    if (isEdit && snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: Padding(padding: const EdgeInsets.all(20.0), child: CircularProgressIndicator(strokeWidth: 2)));
+                    }
+                    if (isEdit && snapshot.connectionState == ConnectionState.done && _selectedDepartment == null && division != null){
+                      _selectedDepartment = _departments.firstWhereOrNull(
+                              (d) => d.name == division.departmentName
+                      );
+                    }
 
-              Widget formContent = Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildFormField(_codeController, 'Mã khoa: *', 'Nhập mã khoa')),
-                          SizedBox(width: 16),
-                          Expanded(child: _buildFormField(_nameController, 'Tên khoa: *', 'Nhập tên khoa')),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildTeacherDropdown( (newValue) { setDialogState(() => _selectedTeacher = newValue); }, _selectedTeacher),
-                      SizedBox(height: 16),
-                      Text('Mô tả:', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 4),
-                      TextFormField(
-                        controller: _descController,
-                        decoration: InputDecoration(
-                          hintText: 'Nhập mô tả',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    return Form(
+                      key: _formKey,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (!isEdit) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildFormField(_codeControllerForAdd, 'Mã bộ môn: *', 'Nhập mã bộ môn')),
+                                  SizedBox(width: 16),
+                                  Expanded(child: _buildFormField(_nameController, 'Tên bộ môn: *', 'Nhập tên bộ môn')),
+                                ],
+                              ),
+                              SizedBox(height: 16),
+                              _buildDepartmentDropdown( (newValue) { setDialogState(() => _selectedDepartment = newValue); }, _selectedDepartment),
+
+                            ] else ... [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildFormField(_nameController, 'Tên bộ môn: *', 'Nhập tên bộ môn')),
+                                  SizedBox(width: 16),
+                                  Expanded(child: _buildDepartmentDropdown( (newValue) { setDialogState(() => _selectedDepartment = newValue); }, _selectedDepartment)),
+                                ],
+                              ),
+                            ],
+                            SizedBox(height: 16),
+                            Text('Mô tả:', style: TextStyle(fontWeight: FontWeight.w600)),
+                            SizedBox(height: 4),
+                            TextFormField(
+                              controller: _descController,
+                              decoration: InputDecoration(
+                                hintText: 'Nhập mô tả',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                              ),
+                              maxLines: 4,
+                              minLines: 3,
+                            ),
+                          ],
                         ),
-                        maxLines: 4,
-                        minLines: 3,
                       ),
-                    ],
-                  ),
-                ),
+                    );
+                  }
               );
-
               return WillPopScope(
                 onWillPop: _showExitConfirmationDialog,
                 child: AlertDialog(
                   titlePadding: const EdgeInsets.all(0),
-                  title: _buildDialogHeader(isEdit ? 'Chỉnh Sửa Thông Tin Khoa' : 'Thêm Khoa Mới'),
+                  title: _buildDialogHeader(isEdit ? 'Chỉnh Sửa Thông Tin Bộ Môn' : 'Thêm Bộ Môn Mới'),
                   contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
                   content: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: 500),
@@ -719,12 +727,21 @@ class _KhoaScreenState extends State<KhoaScreen> {
                         }
                       },
                       child: Text('Hủy'),
-                      style: OutlinedButton.styleFrom(foregroundColor: cancelColor, side: BorderSide(color: cancelColor), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cancelColor, side: BorderSide(color: cancelColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
                     ),
+                    SizedBox(width: 10),
                     ElevatedButton(
-                      onPressed: _isSaving ? null : () => _saveDepartment(() => setDialogState(() => _isSaving = !_isSaving)),
+                      onPressed: _isSaving ? null : () => _saveDivision(() => setDialogState(() => _isSaving = !_isSaving)),
                       child: Text(isEdit ? 'Lưu' : 'Xác nhận'),
-                      style: ElevatedButton.styleFrom(backgroundColor: confirmColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: confirmColor, foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
                     ),
                   ],
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
@@ -736,6 +753,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
+  // (Hàm helper build Header cho Dialog)
   Widget _buildDialogHeader(String title) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -755,6 +773,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
+  // (Hàm helper build Form Field)
   Widget _buildFormField(TextEditingController controller, String label, String hint, {bool isReadOnly = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,37 +801,38 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-  Widget _buildTeacherDropdown(ValueChanged<User?> onChanged, User? currentValue) {
+  // (Hàm helper build Dropdown Khoa)
+  Widget _buildDepartmentDropdown(ValueChanged<Department?> onChanged, Department? currentValue) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Trưởng khoa: *', style: TextStyle(fontWeight: FontWeight.w600)),
+        Text('Khoa: *', style: TextStyle(fontWeight: FontWeight.w600)),
         SizedBox(height: 4),
-        DropdownButtonFormField<User>(
+        DropdownButtonFormField<Department>(
           value: currentValue,
-          hint: Text('-- Chọn Trưởng khoa --'),
+          hint: Text('-- Chọn Khoa quản lý --'),
           isExpanded: true,
           decoration: InputDecoration(
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           ),
-          items: _teachers.map((User teacher) {
-            return DropdownMenuItem<User>(
-              value: teacher,
-              child: Text(teacher.name), // (Model User có 'name' getter)
+          items: _departments.map((Department department) {
+            return DropdownMenuItem<Department>(
+              value: department,
+              child: Text(department.name),
             );
           }).toList(),
-          onChanged: _isLoadingTeachers ? null : onChanged,
-          validator: (value) => value == null ? 'Vui lòng chọn trưởng khoa' : null,
+          onChanged: _isLoadingDepartments ? null : onChanged,
+          validator: (value) => value == null ? 'Vui lòng chọn khoa' : null,
         ),
       ],
     );
   }
 
   /// ---------------------------------------------------
-  /// DIALOG XÓA KHOA (Pop-up)
+  /// DIALOG XÓA BỘ MÔN (Pop-up)
   /// ---------------------------------------------------
-  void _showDeleteConfirmationDialog(Department department) {
+  void _showDeleteConfirmationDialog(Division division) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -822,24 +842,28 @@ class _KhoaScreenState extends State<KhoaScreen> {
               return AlertDialog(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
                 title: Center(child: Text('Thông báo!', style: TextStyle(fontWeight: FontWeight.bold))),
-                content: Text('Bạn chắc chắn muốn xóa khoa "${department.name}"?', textAlign: TextAlign.center),
+                content: Text('Bạn chắc chắn muốn xóa bộ môn "${division.name}"?', textAlign: TextAlign.center),
                 actionsAlignment: MainAxisAlignment.center,
                 actions: <Widget>[
                   OutlinedButton(
                     onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
                     child: Text('Hủy'),
-                    style: OutlinedButton.styleFrom(foregroundColor: cancelColor, side: BorderSide(color: cancelColor), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: cancelColor, side: BorderSide(color: cancelColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
                   ),
                   SizedBox(width: 10),
                   ElevatedButton(
                     onPressed: _isDeleting ? null : () async {
                       setDialogState(() { _isDeleting = true; });
                       try {
-                        await _apiService.deleteDepartment(department.id);
+                        await _apiService.deleteDivision(division.id);
                         if (!mounted) return;
-                        _showSnackBar('Xóa khoa thành công!', isError: false);
+                        _showSnackBar('Xóa bộ môn thành công!', isError: false);
                         Navigator.of(context).pop();
-                        _refreshDepartmentList(clearSearch: true);
+                        _refreshDivisionList(clearSearch: true); // (Sửa logic refresh)
                       } catch (e) {
                         if (!mounted) return;
                         _showSnackBar('Lỗi khi xóa: $e', isError: true);
@@ -847,7 +871,11 @@ class _KhoaScreenState extends State<KhoaScreen> {
                       }
                     },
                     child: Text('Xác nhận'),
-                    style: ElevatedButton.styleFrom(backgroundColor: confirmColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: confirmColor, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
                   ),
                 ],
               );
@@ -857,6 +885,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
+  // (Hàm helper SnackBar)
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -867,4 +896,4 @@ class _KhoaScreenState extends State<KhoaScreen> {
     );
   }
 
-} // End of _KhoaScreenState
+} // End of _DivisionScreenState

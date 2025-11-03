@@ -1,5 +1,3 @@
-// file: lib/screens/lich_hoc_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import intl for DateFormat
 import '../api_service.dart'; // Import ApiService
@@ -759,7 +757,8 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           decoration: _inputDecoration().copyWith(
               hintText: "Nhập $label"
           ),
-          validator: (value) => (value == null || value.isEmpty) ? 'VBỏ' : null,
+          // 🚩 *** FIX 2: Sửa lỗi typo 'VBỏ' ***
+          validator: (value) => (value == null || value.isEmpty) ? 'Không được bỏ trống' : null,
         ),
       ],
     );

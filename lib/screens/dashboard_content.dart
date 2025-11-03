@@ -228,10 +228,13 @@ class _DashboardContentState extends State<DashboardContent> {
                   color: tluBlue)),
           Divider(height: 24, color: Colors.grey.shade200),
 
+          //
+          // ✅ SỬA LỖI: Đồng bộ với Model. Sửa 'schedule.location' thành 'schedule.roomName'
+          //
           _buildScheduleRow(
             schedule.courseCode, // Mã lớp
             schedule.timeRange, // Giờ
-            schedule.location,  // Phòng
+            schedule.roomName,  // Phòng (ĐÃ SỬA TỪ location)
           ),
         ],
       ),

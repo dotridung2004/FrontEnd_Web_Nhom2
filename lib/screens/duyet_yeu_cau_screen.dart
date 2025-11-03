@@ -1,9 +1,7 @@
-// lib/screens/duyet_yeu_cau_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_service.dart';
-import '../models/pending_leave_request.dart'; // Model mới (sẽ tạo ở bước 4)
+import '../models/pending_leave_request.dart'; // Model mới
 
 class DuyetYeuCauScreen extends StatefulWidget {
   const DuyetYeuCauScreen({Key? key}) : super(key: key);
@@ -76,6 +74,7 @@ class _DuyetYeuCauScreenState extends State<DuyetYeuCauScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            // Lỗi từ backend (ví dụ: 'Unknown column location') sẽ hiển thị ở đây
             return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}', style: const TextStyle(color: rejectRed)));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -119,7 +118,10 @@ class _DuyetYeuCauScreenState extends State<DuyetYeuCauScreen> {
             _buildInfoRow(Icons.book_outlined, 'Môn học:', '${request.subjectName} (${request.courseCode})'),
             _buildInfoRow(Icons.calendar_today_outlined, 'Ngày nghỉ:', request.leaveDate),
             _buildInfoRow(Icons.access_time_outlined, 'Ca học:', request.session),
-            _buildInfoRow(Icons.location_on_outlined, 'Phòng:', request.location),
+            //
+            // ✅ SỬA LỖI 3: Sửa 'request.location' thành 'request.roomName'
+            //
+            _buildInfoRow(Icons.location_on_outlined, 'Phòng:', request.roomName),
             _buildInfoRow(Icons.notes_outlined, 'Lý do:', request.reason, isReason: true),
             const SizedBox(height: 16),
             Row(

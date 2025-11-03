@@ -41,7 +41,10 @@ class TodaySchedule {
   final String lessons;
   final String title;
   final String courseCode;
-  final String location;
+  //
+  // ✅ SỬA LỖI 2: Đồng bộ với DB. Sửa 'location' thành 'roomName'
+  //
+  final String roomName;
   final String status;
 
   TodaySchedule({
@@ -50,7 +53,7 @@ class TodaySchedule {
     required this.lessons,
     required this.title,
     required this.courseCode,
-    required this.location,
+    required this.roomName, // Đã sửa
     required this.status,
   });
 
@@ -60,7 +63,8 @@ class TodaySchedule {
     lessons: json["lessons"],
     title: json["title"],
     courseCode: json["course_code"],
-    location: json["location"],
+    // Sửa 'location' thành 'room_name' và thêm dự phòng
+    roomName: json["room_name"] ?? json["location"] ?? 'N/A',
     status: json["status"],
   );
 }

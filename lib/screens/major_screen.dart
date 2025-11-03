@@ -8,6 +8,17 @@ import '../models/major_detail.dart'; // Model cho chi tiết/form (cũ)
 import '../models/department.dart'; // Cần cho Dropdown Khoa
 import 'dart:math'; // Cần cho hàm min()
 
+// ✅ SỬA LỖI: Thêm extension firstOrNull (vì code của _SaveClassCourseFormState CẦN nó)
+extension FirstOrNullExtension<E> on Iterable<E> {
+  E? firstOrNull(bool Function(E) test) {
+    for (final e in this) {
+      if (test(e)) return e;
+    }
+    return null;
+  }
+}
+
+
 class MajorScreen extends StatefulWidget {
   const MajorScreen({Key? key}) : super(key: key);
 
@@ -64,12 +75,14 @@ class _MajorScreenState extends State<MajorScreen> {
         _apiService.fetchDepartments(),
       ]);
 
-      setState(() {
-        _allMajors = results[0] as List<Major>;
-        _allDepartments = results[1] as List<Department>;
-        _totalRows = _allMajors.length;
-        _applyFiltersAndPagination();
-      });
+      if (mounted) {
+        setState(() {
+          _allMajors = results[0] as List<Major>;
+          _allDepartments = results[1] as List<Department>;
+          _totalRows = _allMajors.length;
+          _applyFiltersAndPagination();
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,7 +94,6 @@ class _MajorScreenState extends State<MajorScreen> {
     }
   }
 
-  // 👇 **** BẮT ĐẦU SỬA ĐỔI **** 👇
   /// Xử lý XÓA CỤC BỘ (thay vì reload)
   void _handleLocalDelete(int majorId) {
     setState(() {
@@ -102,7 +114,6 @@ class _MajorScreenState extends State<MajorScreen> {
       _applyFiltersAndPagination();
     });
   }
-  // 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
 
 
   /// Lọc và Phân trang
@@ -418,7 +429,11 @@ class _MajorScreenState extends State<MajorScreen> {
               if (index != -1) {
                 _allMajors[index] = updatedMajor;
               }
-              _allMajors.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+              // Sắp xếp lại để mục vừa cập nhật lên đầu
+              _allMajors.sort((a, b) {
+                if (a.updatedAt == null || b.updatedAt == null) return 0;
+                return b.updatedAt!.compareTo(a.updatedAt!);
+              });
 
               _applyFiltersAndPagination();
             });
@@ -428,7 +443,7 @@ class _MajorScreenState extends State<MajorScreen> {
     );
   }
 
-  /// Hiển thị Dialog XEM CHI TIẾT (Giữ nguyên)
+  /// Hiển thị Dialog XEM CHI TIẾT
   void _showViewDialog(int majorId) {
     showDialog(
       context: context,
@@ -650,8 +665,7 @@ class _MajorScreenState extends State<MajorScreen> {
     );
   }
 
-  // 👇 **** SỬA ĐỔI **** 👇
-  /// Hiển thị Dialog XÁC NHẬN XÓA (Gọi _DeleteMajorDialog)
+  /// Hiển thị Dialog XÁC NHẬN XÓA
   void _showDeleteDialog(int majorId, String majorName) {
     showDialog(
       context: context,
@@ -665,9 +679,7 @@ class _MajorScreenState extends State<MajorScreen> {
           cancelRed: cancelRed,
           okGreen: okGreen,
           iconDelete: iconDelete,
-          // Cập nhật callback
           onDeleted: () {
-            // Gọi hàm xóa cục bộ
             _handleLocalDelete(majorId);
           },
         );
@@ -675,10 +687,9 @@ class _MajorScreenState extends State<MajorScreen> {
     );
   }
 }
-// 👆 **** KẾT THÚC SỬA ĐỔI **** 👆
 
 // ==================================================================
-// DIALOG FORM (Thêm/Sửa - Giữ nguyên)
+// DIALOG FORM (Thêm/Sửa)
 // ==================================================================
 class _MajorFormDialog extends StatefulWidget {
   final int? majorId;
@@ -904,6 +915,7 @@ class __MajorFormDialogState extends State<_MajorFormDialog> {
   Widget build(BuildContext context) {
     String title = _isEditMode ? "Chỉnh sửa thông tin ngành" : "Thêm ngành mới";
 
+    // ✅ SỬA LỖI: Xóa WillPopScope
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       backgroundColor: Colors.white,
@@ -935,6 +947,7 @@ class __MajorFormDialogState extends State<_MajorFormDialog> {
                   ),
                   IconButton(
                     icon: Icon(Icons.close, color: Colors.white),
+                    // ✅ SỬA LỖI: Chỉ gọi pop
                     onPressed: _isLoading
                         ? null
                         : () => Navigator.of(context).pop(),
@@ -1037,6 +1050,7 @@ class __MajorFormDialogState extends State<_MajorFormDialog> {
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
+                    // ✅ SỬA LỖI: Chỉ gọi pop
                     onPressed: _isLoading
                         ? null
                         : () => Navigator.of(context).pop(),

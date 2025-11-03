@@ -542,7 +542,6 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
                                 _buildReadOnlyFormField('Loại học phần', course.subjectType),
                                 // XÓA: Bỏ trường Bộ môn phụ trách và dùng placeholder
                                 const SizedBox(height: 16), // Để cân bằng lưới 3x3
-                                _buildEmptyPlaceholder(label: 'Bộ môn phụ trách', hint: 'Trường đã bị xóa'),
                               ],
                             ),
                           ),

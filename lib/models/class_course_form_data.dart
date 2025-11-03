@@ -3,6 +3,7 @@ import '../table/user.dart';
 import 'course.dart';
 import 'department.dart';
 import 'division.dart';
+import 'room.dart'; // ✅ THÊM IMPORT NÀY
 
 class ClassCourseFormData {
   final List<User> teachers;
@@ -10,6 +11,7 @@ class ClassCourseFormData {
   final List<Department> departments;
   final List<Division> divisions;
   final List<String> semesters;
+  final List<Room> rooms; // ✅ THÊM TRƯỜNG NÀY
 
   ClassCourseFormData({
     required this.teachers,
@@ -17,6 +19,7 @@ class ClassCourseFormData {
     required this.departments,
     required this.divisions,
     required this.semesters,
+    required this.rooms, // ✅ THÊM VÀO CONSTRUCTOR
   });
 
   factory ClassCourseFormData.fromJson(Map<String, dynamic> json) {
@@ -38,6 +41,11 @@ class ClassCourseFormData {
           .toList(),
 
       semesters: List<String>.from(json['semesters'] ?? []),
+
+      // ✅ THÊM LOGIC PARSE CHO ROOMS
+      rooms: (json['rooms'] as List? ?? [])
+          .map((i) => Room.fromJson(i))
+          .toList(),
     );
   }
 }

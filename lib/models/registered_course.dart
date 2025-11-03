@@ -1,9 +1,9 @@
-
 import 'dart:convert';
 
 class RegisteredCourse {
   final int id;
-  final String classCode;     // Mã học phần (CSE360)
+  // ✅ SỬA 1: Đổi tên biến này để chứa Tên Lớp HP
+  final String classCode;     // Sẽ chứa Tên Lớp HP (ví dụ: 'aaa' hoặc '65CK1')
   final String courseName;    // Tên học phần
   final String teacherName;   // Giảng viên
   final String semester;      // Học kì
@@ -21,7 +21,9 @@ class RegisteredCourse {
   factory RegisteredCourse.fromJson(Map<String, dynamic> json) {
     return RegisteredCourse(
       id: json['id'] ?? 0,
-      // 'name' là mã lớp (CSE360) từ ClassCourseAssignment
+
+      // ✅ SỬA 2: Lấy 'name' (Tên lớp HP) thay vì 'course.code' (Mã HP)
+      // API (hàm formatClassCourse) trả về 'name' chính là tên lớp học phần
       classCode: json['name'] ?? 'N/A',
 
       // Lấy tên học phần từ quan hệ

@@ -23,23 +23,19 @@ class Course {
   });
 
   factory Course.fromJson(Map<String, dynamic> json) {
+
+    // ✅ SỬA LỖI TẠI ĐÂY:
+    // Thêm logic để đọc cả 2 kiểu dữ liệu (phẳng và lồng nhau)
+    final String deptName = json['departmentName'] // Đọc kiểu phẳng (vd: "Khoa CNTT")
+        ?? json['department']?['name'] // Đọc kiểu lồng nhau (vd: { "name": "Khoa CNTT" })
+        ?? 'N/A';
+
     return Course(
       id: json['id'] ?? 0,
       code: json['code'] ?? 'N/A',
       name: json['name'] ?? 'N/A',
       credits: (json['credits'] as num?)?.toInt() ?? 0,
-
-      // ==========================================================
-      // ✅ SỬA LỖI 1:
-      // Giữ nguyên bản sửa lỗi từ lần trước, đọc 'departmentName'
-      // mà backend (hàm getFormData) đã gửi về.
-      // ==========================================================
-      departmentName: json['departmentName'] ?? 'N/A',
-
-      // ==========================================================
-      // ✅ SỬA LỖI 2:
-      // Dùng bản sửa lỗi MỚI của bạn, đọc 'subject_type'
-      // ==========================================================
+      departmentName: deptName, // Gán tên khoa đã tìm được
       type: json['subject_type'] ?? 'N/A',
     );
   }

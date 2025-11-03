@@ -2,7 +2,7 @@ import 'dart:convert'; // For jsonEncode, jsonDecode, utf8
 import 'package:flutter/foundation.dart' show kIsWeb; // For checking web platform
 import 'package:http/http.dart' as http; // For making HTTP requests
 
-// Import các model hiện có
+// Import các model
 import 'models/course.dart';
 import 'models/class_course.dart';
 import 'models/registered_course.dart';
@@ -12,18 +12,15 @@ import 'models/schedule.dart';
 import 'models/department.dart';
 import 'models/department_detail.dart';
 import 'models/room.dart';
-import 'models/major.dart'; // Model cho danh sách
+import 'models/major.dart';
 import 'models/division.dart';
 import 'models/division_detail.dart';
-import 'models/major_detail.dart'; // Model cho chi tiết
+import 'models/major_detail.dart';
 import 'models/room_detail.dart';
 import 'models/course_detail.dart';
 import 'models/class_course_detail.dart';
 import 'models/class_model.dart';
-
-// ===== IMPORT MỚI ĐỂ LẤY DATA CHO FORM =====
 import 'models/class_course_form_data.dart';
-// ===========================================
 
 class ApiService {
   // --- Singleton Pattern ---
@@ -46,7 +43,6 @@ class ApiService {
 
   String? _token; // Lưu token xác thực
 
-  // Helper tạo header cho request
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
       'Content-Type': 'application/json',
@@ -664,11 +660,7 @@ class ApiService {
 
   // --- CÁC HÀM LẤY DỮ LIỆU CHO FORM ---
 
-  // =========================================================
-  // ✅ HÀM MỚI: TẢI TẤT CẢ DATA CHO FORM TRONG 1 LẦN GỌI
-  // =========================================================
   Future<ClassCourseFormData> fetchClassCourseFormData() async {
-    // API endpoint này được định nghĩa trong routes/api.php
     final Uri url = Uri.parse('$baseUrl/class-courses/form-data');
     try {
       final response = await http.get(url, headers: _getHeaders());
@@ -684,32 +676,42 @@ class ApiService {
     }
   }
 
-  // --- BỎ CÁC HÀM MOCK DATA CŨ ---
-  // Future<List<Course>> fetchSimpleCourses() async { ... }
-  // Future<List<User>> fetchSimpleTeachers() async { ... }
-  // Future<List<Department>> fetchSimpleDepartments() async { ... }
-  // Future<List<Division>> fetchSimpleDivisions() async { ... }
-  // Future<List<ClassModel>> fetchSimpleStudentClasses() async { ... }
-
   // ===================================================
   // Private Helper Methods
   // ===================================================
+
+  // ✅ SỬA LỖI: Cập nhật hàm này
   Never _handleApiError(http.Response response, String defaultMessage) {
-    print(
-        "Lỗi API (${response.request?.url}): ${response.statusCode} - ${response.body}");
+    print("Lỗi API (${response.request?.url}): ${response.statusCode} - ${response.body}");
+
+    final String errorBody;
     try {
-      final errorBody = utf8.decode(response.bodyBytes);
+      errorBody = utf8.decode(response.bodyBytes);
       if (errorBody.isEmpty) {
+        // Nếu body rỗng, ném lỗi mặc định
         throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode})');
       }
-      final error = jsonDecode(errorBody);
-      throw Exception(
-          error['message'] ?? '$defaultMessage (Mã lỗi: ${response.statusCode})');
     } catch (e) {
-      if (e is FormatException || e is TypeError || e is Exception) {
-        throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode}) - Phản hồi: ${utf8.decode(response.bodyBytes)}');
+      // Lỗi decode (hiếm gặp)
+      throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode}) - Không thể đọc phản hồi');
+    }
+
+    try {
+      // Thử decode JSON
+      final error = jsonDecode(errorBody);
+      // Nếu 'message' tồn tại (lỗi 422 từ Laravel), ném nó
+      if (error is Map && error.containsKey('message')) {
+        throw Exception(error['message']);
       }
-      rethrow;
+      // Nếu không có 'message', ném lỗi chung
+      throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode})');
+    } catch (e) {
+      // Nếu 'e' LÀ Exception chúng ta vừa ném, ném lại nó
+      if (e is Exception) {
+        rethrow;
+      }
+      // Nếu 'e' là lỗi Format (body không phải JSON), ném ra phản hồi thô
+      throw Exception('$defaultMessage (Mã lỗi: ${response.statusCode}) - Phản hồi: $errorBody');
     }
   }
-} // <-- END OF ApiService CLASS
+}

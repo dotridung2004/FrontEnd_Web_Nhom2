@@ -24,9 +24,6 @@ class Schedule {
   });
 
   /// Factory constructor để parse JSON từ API
-  ///
-  /// Chúng ta phải *giả định* cấu trúc JSON mà Laravel trả về.
-  /// Dựa trên API trước đây, có thể nó sẽ lồng các đối tượng.
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
       id: json['id'] ?? 0,
@@ -41,7 +38,8 @@ class Schedule {
       courseName: json['class_course_assignment']?['course']?['name'] ?? 'N/A',
 
       // Giả sử 'semester' (Học kỳ) là một trường trực tiếp
-      semester: json['semester'] ?? 'Học kỳ N/A',
+      // (Nếu nó cũng lồng, bạn cần sửa lại đường dẫn)
+      semester: json['class_course_assignment']?['class_model']?['semester'] ?? 'Học kỳ N/A',
 
       // Lấy tên Phòng (lồng nhau)
       roomName: json['room']?['name'] ?? 'N/A',

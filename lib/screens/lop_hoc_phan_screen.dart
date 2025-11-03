@@ -19,7 +19,23 @@ class LopHocPhanScreen extends StatefulWidget {
   _LopHocPhanScreenState createState() => _LopHocPhanScreenState();
 }
 
+// ✅ SỬA LỖI: Thêm extension firstOrNull nếu nó chưa có
+// (Nếu bạn đã có ở tệp khác, có thể xóa đi,
+// nhưng code của _SaveClassCourseFormState CẦN nó)
+extension FirstOrNullExtension<E> on Iterable<E> {
+  E? firstOrNull(bool Function(E) test) {
+    for (final e in this) {
+      if (test(e)) return e;
+    }
+    return null;
+  }
+}
+
+
 class _LopHocPhanScreenState extends State<LopHocPhanScreen> {
+  // (Giữ nguyên toàn bộ code của _LopHocPhanScreenState
+  // ... initState, dispose, loadInitialData, build, v.v...
+  // ... _showViewDialog, _showAddEditDialog, _showDeleteDialog ...
   // --- Màu sắc ---
   final Color tluBlue = const Color(0xFF005A9C);
   final Color iconViewColor = Colors.blue;
@@ -599,9 +615,6 @@ class _LopHocPhanScreenState extends State<LopHocPhanScreen> {
                     style: OutlinedButton.styleFrom(foregroundColor: cancelColor, side: BorderSide(color: cancelColor), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
                   ),
                   SizedBox(width: 10),
-                  // =========================================================
-                  // ✅ SỬA LỖI: Cập nhật nút Xác nhận (thêm vòng load)
-                  // =========================================================
                   ElevatedButton(
                     onPressed: _isDeleting ? null : () async {
                       setDialogState(() { _isDeleting = true; });
@@ -617,7 +630,6 @@ class _LopHocPhanScreenState extends State<LopHocPhanScreen> {
                         _showSnackBar('Lỗi khi xóa: $e', isError: true);
                         Navigator.of(context).pop();
                       }
-                      // (Không cần finally vì dialog pop() trong cả 2 trường hợp)
                     },
                     child: _isDeleting
                         ? SizedBox(
@@ -746,23 +758,8 @@ class _SaveClassCourseFormState extends State<_SaveClassCourseForm> {
     });
   }
 
-  // Dialog xác nhận Thoát
-  Future<bool> _showExitConfirmationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-        title: Center(child: Text('Thông báo!', style: TextStyle(fontWeight: FontWeight.bold))),
-        content: Text(isEdit ? 'Bạn có muốn thoát khỏi chức năng sửa thông tin?' : 'Bạn có muốn thoát khỏi chức năng thêm mới?', textAlign: TextAlign.center),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: <Widget>[
-          OutlinedButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Hủy'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))),
-          ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Xác nhận'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
+  // ✅ SỬA LỖI: Xóa hàm này (để dùng pop() mặc định)
+  // Future<bool> _showExitConfirmationDialog() async { ... }
 
   Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
@@ -794,144 +791,133 @@ class _SaveClassCourseFormState extends State<_SaveClassCourseForm> {
     final String title = isEdit ? 'CHỈNH SỬA THÔNG TIN LỚP HỌC PHẦN' : 'THÊM LỚP HỌC PHẦN MỚI';
     final Color tluBlue = const Color(0xFF005A9C);
 
-    return WillPopScope(
-      onWillPop: _showExitConfirmationDialog,
-      child: Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-        child: Container(
-          width: 800, // Form rộng
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Tiêu đề
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: tluBlue,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12.0),
-                      topRight: Radius.circular(12.0),
+    // ✅ SỬA LỖI: Xóa WillPopScope
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: Container(
+        width: 800, // Form rộng
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tiêu đề
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: tluBlue,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12.0),
+                    topRight: Radius.circular(12.0),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      // ✅ SỬA LỖI: Chỉ cần gọi pop()
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Nội dung Form
+              widget.isLoading
+                  ? Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                  : Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Cột trái
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildTextField("Tên lớp học phần:", _nameController),
+                          SizedBox(height: 16),
+                          _buildDropdown<Division>("Bộ môn phụ trách:", _filteredDivisions, _selectedDivision,
+                                  (val) => setState(() => _selectedDivision = val), (item) => item.name, "Chọn khoa trước"),
+                          SizedBox(height: 16),
+                          _buildDropdown<Course>("Học phần:", _filteredCourses, _selectedCourse,
+                                  (val) => setState(() => _selectedCourse = val), (item) => item.name, "Chọn khoa trước"),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 24),
+                    // Cột phải
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildDropdown<Department>("Khoa phụ trách:", widget.departments, _selectedDepartment,
+                              _onDepartmentChanged, (item) => item.name, "-- Chọn khoa --"),
+                          SizedBox(height: 16),
+                          _buildDropdown<User>("Giảng viên phụ trách:", widget.teachers, _selectedTeacher,
+                                  (val) => setState(() => _selectedTeacher = val), (item) => item.name, "-- Chọn giảng viên --"),
+                          SizedBox(height: 16),
+                          _buildDropdown<String>("Học kỳ:", widget.semesters, _selectedSemester,
+                                  (val) => setState(() => _selectedSemester = val), (item) => item, "-- Chọn học kỳ --"),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Nút bấm
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
+                      // ✅ SỬA LỖI: Chỉ cần gọi pop()
+                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                      child: Text("Hủy", style: TextStyle(color: Colors.red)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: Colors.red),
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: _isSaving || widget.isLoading ? null : _handleSubmit,
+                      child: _isSaving
+                          ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          strokeWidth: 3,
                         ),
+                      )
+                          : Text("Xác nhận", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: Colors.white),
-                        onPressed: () async {
-                          if (await _showExitConfirmationDialog()) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                // Nội dung Form
-                widget.isLoading
-                    ? Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-                    : Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Cột trái
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildTextField("Tên lớp học phần:", _nameController),
-                            SizedBox(height: 16),
-                            _buildDropdown<Division>("Bộ môn phụ trách:", _filteredDivisions, _selectedDivision,
-                                    (val) => setState(() => _selectedDivision = val), (item) => item.name, "Chọn khoa trước"),
-                            SizedBox(height: 16),
-                            _buildDropdown<Course>("Học phần:", _filteredCourses, _selectedCourse,
-                                    (val) => setState(() => _selectedCourse = val), (item) => item.name, "Chọn khoa trước"),
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 24),
-                      // Cột phải
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildDropdown<Department>("Khoa phụ trách:", widget.departments, _selectedDepartment,
-                                _onDepartmentChanged, (item) => item.name, "-- Chọn khoa --"),
-                            SizedBox(height: 16),
-                            _buildDropdown<User>("Giảng viên phụ trách:", widget.teachers, _selectedTeacher,
-                                    (val) => setState(() => _selectedTeacher = val), (item) => item.name, "-- Chọn giảng viên --"),
-                            SizedBox(height: 16),
-                            _buildDropdown<String>("Học kỳ:", widget.semesters, _selectedSemester,
-                                    (val) => setState(() => _selectedSemester = val), (item) => item, "-- Chọn học kỳ --"),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Nút bấm
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _isSaving ? null : () async {
-                          if (await _showExitConfirmationDialog()) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        child: Text("Hủy", style: TextStyle(color: Colors.red)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: Colors.red),
-                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      ElevatedButton(
-                        onPressed: _isSaving || widget.isLoading ? null : _handleSubmit,
-                        child: _isSaving
-                            ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                        )
-                            : Text("Xác nhận", style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // =========================================================
-  // ✅ SỬA LỖI: Cập nhật hàm _buildTextField (Dấu * màu đỏ)
-  // =========================================================
   Widget _buildTextField(String label, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -962,9 +948,6 @@ class _SaveClassCourseFormState extends State<_SaveClassCourseForm> {
     );
   }
 
-  // =========================================================
-  // ✅ SỬA LỖI: Cập nhật hàm _buildDropdown (Dấu * màu đỏ)
-  // =========================================================
   Widget _buildDropdown<T>(String label, List<T> options, T? selectedValue, Function(T?) onChanged, String Function(T) getItemName, String hint) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

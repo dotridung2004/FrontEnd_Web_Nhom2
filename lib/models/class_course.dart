@@ -12,7 +12,8 @@ class ClassCourse {
   final String departmentName; // Khoa
   final String courseName; // Tên học phần
   final String semester; // Học kỳ
-  final String divisionName; // <-- ✅ PHẢI CÓ TRƯỜNG NÀY
+  final String divisionName;
+  final String roomName; // ✅ THÊM TRƯỜNG NÀY
 
   ClassCourse({
     required this.id,
@@ -21,7 +22,8 @@ class ClassCourse {
     required this.departmentName,
     required this.courseName,
     required this.semester,
-    required this.divisionName, // <-- ✅ THÊM VÀO CONSTRUCTOR
+    required this.divisionName,
+    required this.roomName, // ✅ THÊM VÀO CONSTRUCTOR
   });
 
   /// Factory constructor để parse JSON
@@ -29,17 +31,26 @@ class ClassCourse {
     return ClassCourse(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'N/A',
-
       teacherName: json['teacher']?['name'] ?? 'N/A',
       departmentName: json['course']?['department']?['name'] ?? 'N/A',
       courseName: json['course']?['name'] ?? 'N/A',
+      semester: json['semester'] ?? 'N/A',
+      divisionName: json['division']?['name'] ?? 'N/A',
+      roomName: json['room']?['name'] ?? 'N/A', // ✅ THÊM LOGIC PARSE
+    );
+  }
 
-      // ==========================================================
-      // ✅ SỬA LỖI TẠI ĐÂY:
-      // Đọc 'semester' và 'divisionName' đã được format bởi backend
-      // ==========================================================
-      semester: json['semester'] ?? 'N/A', // Đọc 'HK1 2024-2025'
-      divisionName: json['division']?['name'] ?? 'N/A', // Đọc tên bộ môn
+  /// Factory constructor để tạo một đối tượng ClassCourse rỗng
+  factory ClassCourse.empty() {
+    return ClassCourse(
+      id: 0,
+      name: 'N/A',
+      teacherName: 'N/A',
+      departmentName: 'N/A',
+      courseName: 'N/A',
+      semester: 'N/A',
+      divisionName: 'N/A',
+      roomName: 'N/A', // ✅ THÊM VÀO HÀM EMPTY
     );
   }
 }

@@ -99,7 +99,10 @@ class _LichHocScreenState extends State<LichHocScreen> {
 
   /// Cập nhật danh sách _displayedSchedules dựa trên trang hiện tại
   void _updatePaginatedList() {
-    _totalPages = (_filteredSchedules.length / _itemsPerPage).ceil();
+    // <<< SỬA 5: Sửa lỗi logic tính _totalPages (giống GiangVienScreen)
+    final int totalItems = _filteredSchedules.length;
+    _totalPages = _itemsPerPage > 0 ? (totalItems / _itemsPerPage).ceil() : 0;
+
     if (_totalPages == 0) _totalPages = 1;
     if (_currentPage > _totalPages) _currentPage = _totalPages;
     if (_currentPage < 1) _currentPage = 1;
@@ -110,8 +113,6 @@ class _LichHocScreenState extends State<LichHocScreen> {
       endIndex = _filteredSchedules.length;
     }
 
-    // setState ở đây nếu nó được gọi riêng (ví dụ: _goToPage)
-    // Nhưng vì nó được gọi từ _filterData (đã có setState) nên không cần
     _displayedSchedules = _filteredSchedules.sublist(startIndex, endIndex);
   }
 
@@ -187,16 +188,16 @@ class _LichHocScreenState extends State<LichHocScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        ElevatedButton.icon(
+        // <<< SỬA 1: Bỏ icon, đồng bộ style nút "Thêm"
+        ElevatedButton(
           onPressed: () => _showScheduleDialog(context, mode: DialogMode.add),
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text("Thêm", style: TextStyle(color: Colors.white, fontSize: 16)),
           style: ElevatedButton.styleFrom(
             backgroundColor: tluBlue,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
             minimumSize: const Size(0, 50),
           ),
+          child: const Text("Thêm", style: TextStyle(color: Colors.white, fontSize: 16)),
         ),
         SizedBox(
           width: 300,
@@ -267,7 +268,7 @@ class _LichHocScreenState extends State<LichHocScreen> {
     );
   }
 
-  /// Xây dựng một hàng trong Bảng
+  /// Xây dựng một hàng trong Bảng (Giữ nguyên - đã đồng bộ)
   DataRow _buildDataRow(int stt, Schedule schedule, BuildContext context) {
     return DataRow(
       cells: [
@@ -291,13 +292,13 @@ class _LichHocScreenState extends State<LichHocScreen> {
 
   /// Xây dựng thanh điều khiển Phân trang (Chuẩn hóa)
   Widget _buildPaginationControls() {
-    String startItem = _filteredSchedules.isEmpty ? '0' : ((_currentPage - 1) * _itemsPerPage + 1).toString();
-    String endItem = (_currentPage * _itemsPerPage > _filteredSchedules.length) ? _filteredSchedules.length.toString() : (_currentPage * _itemsPerPage).toString();
+    // <<< SỬA 2: Đồng bộ text phân trang (giống GiangVienScreen)
+    final int totalItems = _filteredSchedules.length;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text('Hiển thị $startItem - $endItem / ${_filteredSchedules.length} kết quả', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        Text('Trang $_currentPage / $_totalPages (Tổng: $totalItems)'),
         const SizedBox(width: 10),
         IconButton(
           icon: const Icon(Icons.first_page),
@@ -342,26 +343,26 @@ class _LichHocScreenState extends State<LichHocScreen> {
     );
   }
 
-  /// Hiển thị dialog Xác nhận Xóa (Logic SnackBar của bạn đã CHUẨN)
+  /// Hiển thị dialog Xác nhận Xóa
   void _showDeleteConfirmDialog(BuildContext context, Schedule schedule) async {
+    // <<< SỬA 3: Đồng bộ dialog XÁC NHẬN XÓA (giống GiangVienScreen)
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-          title: const Text("Thông báo!"),
-          content: Text("Bạn chắc chắn muốn xóa lịch học của '${schedule.teacherName}'?"),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          actions: [
+          title: const Text('Xác nhận Xóa'),
+          content: Text('Bạn có chắc chắn muốn xóa lịch học của "${schedule.teacherName}" không?'),
+          actions: <Widget>[
             TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text("Hủy"),
-                style: TextButton.styleFrom(foregroundColor: Colors.grey[700], backgroundColor: Colors.grey[200])
+              child: const Text('Hủy'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
             ),
             TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text("Xác nhận"),
-                style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.green)
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Xóa'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
             ),
           ],
         );
@@ -376,7 +377,7 @@ class _LichHocScreenState extends State<LichHocScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Đã xóa lịch học thành công!"),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.green, // Dùng xanh lá cho thành công
             behavior: SnackBarBehavior.floating,
             margin: EdgeInsets.all(10),
             duration: Duration(seconds: 2),
@@ -463,7 +464,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     super.dispose();
   }
 
-  /// Xử lý khi nhấn nút Lưu (Logic SnackBar của bạn đã CHUẨN)
+  /// Xử lý khi nhấn nút Lưu
   void _handleSave() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedAssignmentId == null || _selectedRoomId == null || _selectedDate == null) {
@@ -492,7 +493,6 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           successMessage = "Cập nhật lịch học thành công!";
         }
 
-        // Hiển thị SnackBar TRƯỚC khi đóng dialog và tải lại
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -535,29 +535,48 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     }
   }
 
+  // <<< SỬA 4: Đồng bộ các nút Hủy/Lưu/Xác nhận trong dialog (style giống GiangVienScreen)
   List<Widget> _getActions() {
     if (_isLoading) {
-      return [const CircularProgressIndicator()];
+      return [const Center(child: CircularProgressIndicator())];
     }
+
+    // Nút cho chế độ XEM
     if (widget.mode == DialogMode.view) {
       return [
-        TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Xác nhận"),
-            style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.green)
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
         ),
       ];
     }
+
+    // Nút cho chế độ THÊM / SỬA
     return [
-      TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text("Hủy"),
-          style: TextButton.styleFrom(foregroundColor: Colors.grey[700], backgroundColor: Colors.grey[200])
+      OutlinedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text('Hủy'),
       ),
-      TextButton(
-          onPressed: _handleSave,
-          child: const Text("Lưu"),
-          style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.green)
+      const SizedBox(width: 16),
+      ElevatedButton(
+        onPressed: _handleSave,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text('Lưu', style: TextStyle(color: Colors.white)),
       ),
     ];
   }
@@ -566,14 +585,18 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   Widget build(BuildContext context) {
     // Sử dụng màu tluBlue cho nhất quán
     const Color headerColor = Color(0xFF005A9C);
+    // Màu nền content dialog cho đồng bộ
+    const Color dialogContentBgColor = Color(0xFFF5F5F5);
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       titlePadding: EdgeInsets.zero,
+      contentPadding: EdgeInsets.zero, // Tắt padding mặc định
+      backgroundColor: dialogContentBgColor, // Đặt màu nền content
       title: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         decoration: const BoxDecoration(
-          color: headerColor, // ĐÃ SỬA
+          color: headerColor,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(8.0),
             topRight: Radius.circular(8.0),
@@ -601,12 +624,12 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
+            // Thêm padding_all 24.0 cho đồng bộ
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Các trường đã được chuẩn hóa
                 _buildAssignmentDropdown(),
                 const SizedBox(height: 16),
                 _buildRoomDropdown(),
@@ -627,7 +650,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
 
   // --- Helpers xây dựng Form (Đã chuẩn hóa) ---
 
-  /// Helper build Dropdown Phân công (Giữ nguyên logic lọc trùng của bạn)
+  /// Helper build Dropdown Phân công
   Widget _buildAssignmentDropdown() {
     return FutureBuilder<List<ClassCourseAssignment>>(
       future: _assignmentsFuture,
@@ -638,7 +661,6 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
         } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           content = const Text("Lỗi tải DS phân công", style: TextStyle(color: Colors.red));
         } else {
-          // --- Logic lọc trùng của bạn (Rất tốt) ---
           final uniqueAssignments = <String, int>{}; // Map<DisplayName, ID>
           for (var assignment in snapshot.data!) {
             uniqueAssignments.putIfAbsent(assignment.displayName, () => assignment.id);
@@ -649,13 +671,12 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
               child: Text(entry.key, overflow: TextOverflow.ellipsis),
             );
           }).toList();
-          // --- Kết thúc lọc trùng ---
 
           content = DropdownButtonFormField<int>(
             value: uniqueAssignments.containsValue(_selectedAssignmentId) ? _selectedAssignmentId : null,
             hint: const Text("Chọn GV - Môn - Lớp"),
             isExpanded: true,
-            decoration: _inputDecoration(), // Chuẩn hóa
+            decoration: _inputDecoration(),
             items: dropdownItems,
             onChanged: _isReadOnly ? null : (value) {
               setState(() => _selectedAssignmentId = value);
@@ -663,11 +684,10 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             validator: (value) => value == null ? 'Vui lòng chọn' : null,
           );
         }
-        // Thêm label bên ngoài
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Phân công (GV - Môn - Lớp) *", style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600)),
+            Text("Phân công (GV - Môn - Lớp) *", style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             content,
           ],
@@ -690,7 +710,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           content = DropdownButtonFormField<int>(
             value: _selectedRoomId,
             hint: const Text("Chọn phòng học"),
-            decoration: _inputDecoration(), // Chuẩn hóa
+            decoration: _inputDecoration(),
             items: snapshot.data!.map((room) => DropdownMenuItem<int>(
               value: room.id,
               child: Text(room.name),
@@ -702,7 +722,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Phòng học *", style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600)),
+            Text("Phòng học *", style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             content,
           ],
@@ -716,7 +736,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Ngày học *", style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600)),
+        Text("Ngày học *", style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextFormField(
           readOnly: true,
@@ -749,7 +769,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("$label *", style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600)),
+        Text("$label *", style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -757,20 +777,26 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           decoration: _inputDecoration().copyWith(
               hintText: "Nhập $label"
           ),
-          // 🚩 *** FIX 2: Sửa lỗi typo 'VBỏ' ***
           validator: (value) => (value == null || value.isEmpty) ? 'Không được bỏ trống' : null,
         ),
       ],
     );
   }
 
-  /// Helper build style cho Input (Đã chuẩn hóa - không còn label)
+  /// Helper build style cho Input (Đồng bộ style với GiangVienScreen)
   InputDecoration _inputDecoration() {
     return InputDecoration(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6.0)),
-        filled: _isReadOnly,
-        fillColor: _isReadOnly ? Colors.grey[100] : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0)
+      filled: true,
+      fillColor: _isReadOnly ? Colors.grey[200] : Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
   }
 }

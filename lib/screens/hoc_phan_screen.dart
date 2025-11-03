@@ -1,3 +1,6 @@
+// File: lib/screens/hoc_phan_screen.dart
+// [ĐÃ SỬA CÁC NÚT DIALOG CHO GIỐNG KHOA_SCREEN]
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -9,11 +12,16 @@ import '../models/course_detail.dart';
 import '../models/department.dart';
 // 👆 KẾT THÚC THÊM IMPORT
 
-// Hằng số màu
+// Hằng số màu (giống khoa_screen)
 final Color tluBlue = const Color(0xFF005A9C);
 final Color iconView = Colors.blue;
 final Color iconEdit = Colors.green;
 final Color iconDelete = Colors.red;
+
+// (Thêm màu từ khoa_screen để dùng cho dialog)
+final Color cancelColor = Colors.red;
+final Color confirmColor = Colors.green.shade600;
+
 
 class HocPhanScreen extends StatefulWidget {
   const HocPhanScreen({Key? key}) : super(key: key);
@@ -173,7 +181,7 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Nút "Thêm học phần"
+              // Nút "Thêm học phần" (Style này đã giống khoa_screen)
               ElevatedButton.icon(
                 onPressed: () => _showAddEditDialog(context), // GỌI DIALOG THÊM
                 icon: Icon(Icons.add, color: Colors.white, size: 20),
@@ -192,7 +200,7 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
                 ),
               ),
 
-              // Thanh "Tìm kiếm"
+              // Thanh "Tìm kiếm" (Style này đã giống khoa_screen)
               Container(
                 width: 300,
                 child: TextField(
@@ -263,7 +271,7 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
                 }),
                 // 3. Phân trang
                 if (_totalItems > 0)
-                  _buildPaginationControls(),
+                  _buildPaginationControls(), // (Style này đã giống khoa_screen)
               ],
             ),
           ),
@@ -335,6 +343,7 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // (Icons đã giống khoa_screen)
               IconButton(
                 icon: Icon(Icons.info_outline, color: iconView),
                 onPressed: () => _showViewDialog(context, course.id),
@@ -346,7 +355,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
                 tooltip: "Sửa",
               ),
               IconButton(
-                // SỬA: Thêm logic loading vào nút xóa
                 icon: Icon(Icons.delete_outline, color: iconDelete),
                 onPressed: () => _showDeleteDialog(context, course),
                 tooltip: "Xóa",
@@ -392,7 +400,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // BỎ _refreshData() ở đây vì nó đã được gọi bên trong dialog
       }
     });
   }
@@ -415,7 +422,6 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
               content: Text('Đã xóa học phần "${course.name}" thành công!'),
               backgroundColor: Colors.green),
         );
-        // Không cần _refreshData() ở đây nữa
       } else if (deleted is Exception) {
         // Bắt lỗi nếu quá trình xóa thất bại
         ScaffoldMessenger.of(context).showSnackBar(
@@ -434,7 +440,7 @@ class _HocPhanScreenState extends State<HocPhanScreen> {
 // =======================================================================
 
 // ==========================================================
-// 1. POPUP XEM CHI TIẾT (ĐÃ CĂN CHỈNH VÀ SỬA MÔ TẢ)
+// 1. POPUP XEM CHI TIẾT
 // ==========================================================
 class ViewCourseDialog extends StatefulWidget {
   final int courseId;
@@ -463,7 +469,7 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
+            // Header (Style đã giống khoa_screen)
             Container(
               padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
@@ -554,20 +560,23 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
                       const SizedBox(height: 24),
                       const Divider(),
                       const SizedBox(height: 16),
-                      // Footer
+
+                      // --- SỬA NÚT "QUAY LẠI" ---
                       Align(
                         alignment: Alignment.centerRight,
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: tluBlue,
+                            foregroundColor: Colors.white, // (Thêm)
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)), // (Thêm)
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 24, vertical: 16),
                           ),
-                          child: const Text('Quay lại',
-                              style: TextStyle(color: Colors.white)),
+                          child: const Text('Quay lại'), // (Bỏ style Txt)
                         ),
                       ),
+                      // --- KẾT THÚC SỬA ---
                     ],
                   ),
                 );
@@ -579,7 +588,7 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
     );
   }
 
-  // SỬA: Hàm build Read Only Field (giống form Add/Edit), có xử lý trường rỗng
+  // (Hàm helper _buildReadOnlyFormField không đổi)
   Widget _buildReadOnlyFormField(String label, String value, {bool isMultiLine = false}) {
     final displayValue = (value.isEmpty || value == 'N/A') ? 'Không có mô tả' : value;
     final isNoData = (value.isEmpty || value == 'N/A');
@@ -601,41 +610,6 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             filled: true,
             fillColor: Colors.grey[100], // Nền xám
-            // SỬA LỖI: Thêm borderSide
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // THÊM: Helper mới để tạo một ô placeholder rỗng (dùng để cân bằng grid)
-  Widget _buildEmptyPlaceholder({required String label, required String hint}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        const SizedBox(height: 8),
-        TextFormField(
-          initialValue: '',
-          readOnly: true,
-          maxLines: 1,
-          minLines: 1,
-          style: TextStyle(color: Colors.grey.shade600),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade600),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            filled: true,
-            fillColor: Colors.grey[100],
-            // SỬA LỖI: Thêm borderSide
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -652,14 +626,12 @@ class _ViewCourseDialogState extends State<ViewCourseDialog> {
 }
 
 // ==========================================================
-// 2. POPUP THÊM / SỬA HỌC PHẦN (ĐÃ XÓA TRƯỜNG BỘ MÔN)
+// 2. POPUP THÊM / SỬA HỌC PHẦN
 // ==========================================================
 class AddEditCourseDialog extends StatefulWidget {
   final int? courseId; // Nếu null là Thêm, nếu có là Sửa
-  // THÊM: Callback để gọi refresh từ HocPhanScreen
   final Future<void> Function() onRefresh;
 
-  // SỬA: Thêm required this.onRefresh
   const AddEditCourseDialog({Key? key, this.courseId, required this.onRefresh}) : super(key: key);
 
   @override
@@ -683,8 +655,6 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
   // State
   int? _selectedDepartmentId;
   String? _selectedType;
-
-  // Biến để lưu lỗi trả về từ API (ví dụ: lỗi trùng mã)
   String? _codeApiError;
 
   // Trạng thái
@@ -694,37 +664,28 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
   @override
   void initState() {
     super.initState();
-    // GỌI HÀM TẢI GỘP TẤT CẢ DỮ LIỆU BAN ĐẦU
     _loadingFuture = _loadInitialData();
   }
 
-  // THÊM: Hàm tải gộp tất cả dữ liệu cần thiết
   Future<Map<String, dynamic>> _loadInitialData() async {
-    // Luôn tải danh sách Khoa
     final departmentsFuture = _apiService.fetchDepartments().catchError((e) {
-      // Xử lý lỗi tải khoa, trả về rỗng để form vẫn hiển thị nhưng không chọn được
       print('Lỗi tải Departments: $e');
       return <Department>[];
     });
 
     final results = <String, dynamic>{};
-
-    // Tải danh sách Khoa
     results['departments'] = await departmentsFuture;
 
-    // Nếu là Sửa, tải chi tiết khóa học
     if (_isEditMode) {
       try {
         final course = await _apiService.fetchCourseDetails(widget.courseId!);
         results['course'] = course;
 
-        // Cập nhật giá trị ban đầu cho controllers và state
         if (mounted) {
           _codeController.text = course.code;
           _nameController.text = course.name;
           _creditsController.text = course.credits.toString();
           _descriptionController.text = course.description;
-          // Set state để Dropdown hiển thị giá trị ban đầu sau khi FutureBuilder hoàn tất
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if(mounted) {
               setState(() {
@@ -735,12 +696,9 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
           });
         }
       } catch (e) {
-        // Lỗi tải chi tiết khóa học
-        // Ném lỗi để FutureBuilder chuyển sang trạng thái snapshot.hasError
         throw Exception('Không thể tải chi tiết học phần: $e');
       }
     }
-
     return results;
   }
 
@@ -756,20 +714,16 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
 
   // Hàm xử lý khi nhấn Lưu/Xác nhận
   Future<void> _submitForm() async {
-    // 1. Kiểm tra lỗi Frontend (Flutter validation)
     if (_formKey.currentState!.validate()) {
-      // BẮT ĐẦU: Hiển thị trạng thái đang lưu
       setState(() {
         _isSaving = true;
         _codeApiError = null; // Xóa lỗi API cũ
       });
 
-      // Tạo map dữ liệu (Đã xóa division_id)
       final data = {
         'code': _codeController.text,
         'name': _nameController.text,
         'credits': int.tryParse(_creditsController.text) ?? 0,
-        // Đảm bảo không gửi null nếu chưa chọn (Backend nên xử lý)
         'department_id': _selectedDepartmentId,
         'subject_type': _selectedType,
         'description': _descriptionController.text,
@@ -781,26 +735,17 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
         } else {
           await _apiService.createCourse(data);
         }
-
-        // --- THAO TÁC QUAN TRỌNG ĐÃ SỬA ---
-        // 1. CHỜ: Chờ việc tải lại dữ liệu hoàn tất
         await widget.onRefresh();
-
-        // 2. THÀNH CÔNG: Đóng dialog và trả về 'true'
         if (mounted) Navigator.of(context).pop(true);
-        // ------------------------------------
 
       } catch (e) {
-        // THẤT BẠI: Dừng trạng thái đang lưu
         setState(() => _isSaving = false);
 
-        // 2. Bắt lỗi trùng mã (API 422 Unprocessable Entity)
         if (e.toString().contains('code') && e.toString().contains('422')) {
           setState(() {
             _codeApiError = 'Mã học phần này đã tồn tại. Vui lòng nhập mã khác.';
           });
         } else if (mounted) {
-          // Lỗi khác (500, mạng,...)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text('Lỗi khi lưu: $e'), backgroundColor: Colors.red),
@@ -819,7 +764,7 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
+            // Header (Style đã giống khoa_screen)
             Container(
               padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
@@ -849,11 +794,10 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                 ],
               ),
             ),
-            // Body: Sử dụng FutureBuilder để kiểm soát Loading toàn màn hình
+            // Body: Sử dụng FutureBuilder
             FutureBuilder<Map<String, dynamic>>(
               future: _loadingFuture,
               builder: (context, snapshot) {
-                // 1. LOADING STATE: Hiển thị indicator toàn màn hình
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
                     height: 500, // Chiều cao cố định cho màn hình tải
@@ -861,9 +805,7 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                   );
                 }
 
-                // 2. ERROR STATE: Nếu có lỗi nghiêm trọng (ví dụ: lỗi tải chi tiết khi Sửa)
                 if (snapshot.hasError) {
-                  // Đóng dialog và hiển thị SnackBar lỗi
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -873,11 +815,9 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                       ),
                     );
                   });
-                  // Trả về widget rỗng tạm thời
                   return const SizedBox(height: 1);
                 }
 
-                // Lấy danh sách Khoa từ snapshot
                 final departments = snapshot.data!['departments'] as List<Department>;
 
                 // 3. SUCCESS STATE: Hiển thị Form sau khi tải xong
@@ -921,7 +861,6 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                                     },
                                   ),
                                   const SizedBox(height: 16),
-                                  // Trường Dropdown Khoa (CHỈ CẦN TRUYỀN DỮ LIỆU ĐÃ TẢI)
                                   _buildDropdownKhoa(departments),
                                 ],
                               ),
@@ -963,55 +902,45 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                         const SizedBox(height: 24),
                         const Divider(),
                         const SizedBox(height: 16),
-                        // Footer (Buttons)
+
+                        // --- SỬA CÁC NÚT ACTIONS ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            // Nút Hủy (Nền trắng, viền đỏ, to và rộng hơn)
-                            SizedBox(
-                              height: 50, // Chiều cao cố định cho nút
-                              child: OutlinedButton(
-                                onPressed: _isSaving ? null : () => Navigator.of(context).pop(), // Vô hiệu hóa khi đang lưu
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24), // Giảm vertical padding
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0)),
-                                  side: const BorderSide(color: Colors.red, width: 1.5),
-                                  backgroundColor: Colors.white, // Nền trắng
-                                  foregroundColor: Colors.red,
-                                ),
-                                child:
-                                const Text('Hủy bỏ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            OutlinedButton(
+                              onPressed: _isSaving ? null : () => Navigator.of(context).pop(), // Vô hiệu hóa khi đang lưu
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: cancelColor, // (Từ khoa_screen)
+                                side: BorderSide(color: cancelColor), // (Từ khoa_screen)
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20.0)), // (SỬA: 20.0)
                               ),
+                              child:
+                              const Text('Hủy bỏ'),
                             ),
                             const SizedBox(width: 16),
-                            // Nút Xác nhận (Nền xanh lá, to và rộng hơn)
-                            SizedBox(
-                              height: 50, // Chiều cao cố định cho nút
-                              child: ElevatedButton(
-                                onPressed: _isSaving ? null : _submitForm, // Vô hiệu hóa khi đang lưu
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4CAF50), // Màu xanh lá
-                                  padding: const EdgeInsets.symmetric(horizontal: 24), // Giảm vertical padding
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0)),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: _isSaving
-                                    ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                                )
-                                    : Text(
-                                    _isEditMode
-                                        ? 'Lưu thay đổi'
-                                        : 'Xác nhận',
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                            ElevatedButton(
+                              onPressed: _isSaving ? null : _submitForm, // Vô hiệu hóa khi đang lưu
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: confirmColor, // (Từ khoa_screen)
+                                foregroundColor: Colors.white, // (Từ khoa_screen)
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20.0)), // (SỬA: 20.0)
                               ),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                              )
+                                  : Text(
+                                  _isEditMode
+                                      ? 'Lưu thay đổi'
+                                      : 'Xác nhận'),
                             ),
                           ],
                         ),
+                        // --- KẾT THÚC SỬA ---
                       ],
                     ),
                   ),
@@ -1026,13 +955,10 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
 
   // == Helper build Dropdowns (Đã bỏ FutureBuilder) ==
 
-  // SỬA: Hàm này nhận departments đã được tải từ FutureBuilder bên ngoài
+  // (Hàm này không đổi)
   Widget _buildDropdownKhoa(List<Department> departments) {
-
-    // 1. Trường hợp Lỗi hoặc rỗng
     if (departments.isEmpty) {
       String hintText = 'Không có dữ liệu khoa';
-
       return _buildTextFormField(
         label: 'Khoa phụ trách',
         hint: hintText,
@@ -1040,12 +966,9 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
         validator: (value) => null,
       );
     }
-
-    // 2. Trường hợp Thành công (Hiển thị Dropdown)
     return _buildDropdownField<int>(
       label: 'Khoa phụ trách',
       hint: '--Chọn khoa phụ trách--',
-      // SỬA: Giá trị được giữ bởi _selectedDepartmentId (được set trong initState)
       value: _selectedDepartmentId,
       items: departments.map((dept) {
         return DropdownMenuItem<int>(
@@ -1062,8 +985,8 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
     );
   }
 
+  // (Hàm này không đổi)
   Widget _buildDropdownLoai() {
-    // Thêm chỉ định kiểu <String> cho _buildDropdownField
     return _buildDropdownField<String>(
       label: 'Loại học phần',
       hint: '--Chọn loại học phần--',
@@ -1074,7 +997,6 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
           child: Text(type),
         );
       }).toList(),
-      // Chỉ định kiểu rõ ràng cho onChanged
       onChanged: (String? value) {
         setState(() => _selectedType = value);
       },
@@ -1084,6 +1006,7 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
 
   // == Helper build Text & Dropdown (Giống nhau cho các form) ==
 
+  // (Hàm này không đổi)
   Widget _buildTextFormField({
     TextEditingController? controller, // <--- Đã sửa lỗi missing argument
     required String label,
@@ -1113,7 +1036,6 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
             errorText: errorText, // HIỂN THỊ LỖI API
             filled: true,
             fillColor: readOnly ? Colors.grey[100] : Colors.white,
-            // SỬA LỖI: Thêm borderSide
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -1125,11 +1047,9 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
                 borderSide: BorderSide(color: tluBlue)),
           ),
           validator: (value) {
-            // Nếu có lỗi API, bỏ qua validator thường quy
             if (_codeApiError != null && label.contains('Mã học phần')) return null;
             return validator?.call(value);
           },
-          // SỬA: Thêm onChanged để reset lỗi API khi người dùng gõ lại
           onChanged: (value) {
             if (_codeApiError != null && label.contains('Mã học phần')) {
               setState(() {
@@ -1142,6 +1062,7 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
     );
   }
 
+  // (Hàm này không đổi)
   Widget _buildDropdownField<T>({
     required String label,
     required String hint,
@@ -1165,7 +1086,6 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
             hintText: hint,
             filled: true,
             fillColor: onChanged == null ? Colors.grey[100] : Colors.white, // Màu xám nếu bị vô hiệu hóa
-            // SỬA LỖI: Thêm borderSide
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -1184,9 +1104,8 @@ class _AddEditCourseDialogState extends State<AddEditCourseDialog> {
 } // === KẾT THÚC CLASS _AddEditCourseDialogState ===
 
 // ==========================================================
-// 3. DIALOG XÁC NHẬN XÓA (Hàm dùng chung - ĐÃ CĂN CHỈNH NÚT)
+// 3. DIALOG XÁC NHẬN XÓA (Hàm dùng chung)
 // ==========================================================
-// THÊM: Tham số onConfirmDelete
 Future<dynamic> showDeleteConfirmationDialog(
     BuildContext context, {
       required String title,
@@ -1200,12 +1119,11 @@ Future<dynamic> showDeleteConfirmationDialog(
       return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              // SỬA GIAO DIỆN DIALOG XÓA
               shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-              title: const Center(
+              title: Center(
                 child: Text(
-                  'Thông báo!', // SỬA: Luôn dùng 'Thông báo!'
+                  title, // SỬA: Dùng title động
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1216,64 +1134,49 @@ Future<dynamic> showDeleteConfirmationDialog(
               ),
               actionsAlignment: MainAxisAlignment.center,
               actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20), // Điều chỉnh padding
-              actions: <Widget>[
-                // Nút Hủy (Nền trắng, viền đỏ, to và rộng hơn)
-                Expanded(
-                  child: SizedBox(
-                    height: 50, // Chiều cao cố định
-                    child: OutlinedButton(
-                      onPressed: _isDeleting ? null : () => Navigator.of(context).pop(false), // Vô hiệu hóa khi đang xóa
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24), // Giảm vertical padding
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0)),
-                        side: const BorderSide(color: Colors.red, width: 1.5),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.red,
-                      ),
-                      child:
-                      const Text('Hủy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Nút Xác nhận (Nền xanh lá, to và rộng hơn)
-                Expanded(
-                  child: SizedBox(
-                    height: 50, // Chiều cao cố định
-                    child: ElevatedButton(
-                      onPressed: _isDeleting ? null : () async { // THÊM 'async'
-                        setDialogState(() { _isDeleting = true; }); // Bắt đầu loading
 
-                        try {
-                          // CHỜ cho việc gọi API xóa và refresh data hoàn tất
-                          await onConfirmDelete();
-                          // Nếu thành công, đóng dialog và trả về true
-                          if (context.mounted) Navigator.of(context).pop(true);
-                        } catch (e) {
-                          // Nếu thất bại, đóng dialog và trả về lỗi
-                          if (context.mounted) Navigator.of(context).pop(e as Exception);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50), // Màu xanh lá
-                        padding: const EdgeInsets.symmetric(horizontal: 24), // Giảm vertical padding
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0)),
-                      ),
-                      // HIỂN THỊ LOADING XOAY TRÒN
-                      child: _isDeleting
-                          ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                      )
-                          : const Text('Xác nhận',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
+              // --- SỬA CÁC NÚT ACTIONS ---
+              actions: <Widget>[
+                OutlinedButton(
+                  onPressed: _isDeleting ? null : () => Navigator.of(context).pop(false), // Vô hiệu hóa khi đang xóa
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cancelColor, // (Từ khoa_screen)
+                    side: BorderSide(color: cancelColor), // (Từ khoa_screen)
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0)), // (SỬA: 20.0)
                   ),
+                  child:
+                  const Text('Hủy'),
+                ),
+                const SizedBox(width: 10), // (Giống khoa_screen)
+                ElevatedButton(
+                  onPressed: _isDeleting ? null : () async { // THÊM 'async'
+                    setDialogState(() { _isDeleting = true; }); // Bắt đầu loading
+
+                    try {
+                      await onConfirmDelete();
+                      if (context.mounted) Navigator.of(context).pop(true);
+                    } catch (e) {
+                      if (context.mounted) Navigator.of(context).pop(e as Exception);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: confirmColor, // (Từ khoa_screen)
+                    foregroundColor: Colors.white, // (Từ khoa_screen)
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0)), // (SỬA: 20.0)
+                  ),
+                  // HIỂN THỊ LOADING XOAY TRÒN
+                  child: _isDeleting
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                  )
+                      : const Text('Xác nhận'),
                 ),
               ],
+              // --- KẾT THÚC SỬA ---
             );
           }
       );

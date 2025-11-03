@@ -1,11 +1,10 @@
+// [ĐÃ SỬA LỖI TRUY CẬP DỮ LIỆU]
 import 'package:flutter/material.dart';
-import '../api_service.dart';       // 👈 THÊM
-import '../table/home_summary.dart';// 👈 THÊM
-import '../table/user.dart';        // 👈 THÊM
+import '../api_service.dart';
+import '../table/home_summary.dart';
+import '../table/user.dart';
 
-// 👇 THAY ĐỔI: Chuyển thành StatefulWidget
 class DashboardContent extends StatefulWidget {
-  // 👈 THÊM: Nhận user từ HomeScreen
   final User user;
   const DashboardContent({Key? key, required this.user}) : super(key: key);
 
@@ -15,31 +14,24 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   final Color tluBlue = const Color(0xFF005A9C);
-
-  // 👇 THÊM: State để gọi API
   late Future<HomeSummary> _summaryFuture;
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    // 👈 THÊM: Gọi API khi widget được tạo, dùng ID của user
     _summaryFuture = _apiService.fetchHomeSummary(widget.user.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    // 👇 THÊM: Dùng FutureBuilder để xử lý các trạng thái
     return FutureBuilder<HomeSummary>(
       future: _summaryFuture,
       builder: (context, snapshot) {
-
-        // 1. Trạng thái Đang tải
+        // ... (Các trạng thái loading, error, no data) ...
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
-
-        // 2. Trạng thái Lỗi
         if (snapshot.hasError) {
           return Center(
             child: Text(
@@ -48,23 +40,19 @@ class _DashboardContentState extends State<DashboardContent> {
             ),
           );
         }
-
-        // 3. Trạng thái Không có dữ liệu
         if (!snapshot.hasData) {
           return Center(child: Text('Không có dữ liệu trang chủ.'));
         }
 
         // 4. Trạng thái Thành công: Lấy dữ liệu
-        final homeData = snapshot.data!;
+        final homeData = snapshot.data!; // homeData là 1 HomeSummary
 
-        // Trả về UI chính (lấy từ hàm build() cũ của bạn)
-        // Dùng `homeData` để điền dữ liệu
         return SingleChildScrollView(
           padding: EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tiêu đề "Trang chủ" (cho layout desktop)
+              // ... (Tiêu đề) ...
               LayoutBuilder(builder: (context, constraints) {
                 if (constraints.maxWidth > 900) {
                   return Text(
@@ -79,34 +67,34 @@ class _DashboardContentState extends State<DashboardContent> {
               }),
               SizedBox(height: 24),
 
-              // --- 👇 THAY ĐỔI: Dùng dữ liệu API ---
-              // API của PĐT trả về 'số tiết', không phải 'số người dùng'.
-              // Chúng ta sẽ hiển thị dữ liệu API nhận được.
+
+              // --- 👇 BẮT ĐẦU SỬA LỖI ---
+              // Phải truy cập thông qua 'homeData.summary'
               Wrap(
                 spacing: 24.0,
                 runSpacing: 24.0,
                 children: [
                   _buildStatCard(
-                      "Số tiết hôm nay",      // Tiêu đề ĐÚNG
-                      homeData.summary.todayLessons.toString(), // Dữ liệu API
+                      "Số tiết hôm nay",
+                      // SỬA: Thêm .summary
+                      homeData.summary.todayLessons.toString(),
                       Icons.today_outlined,
-                      Colors.blue
-                  ),
+                      Colors.blue),
                   _buildStatCard(
-                      "Tổng số tiết tuần này", // Tiêu đề ĐÚNG
-                      homeData.summary.weekLessons.toString(), // Dữ liệu API
+                      "Tổng số tiết tuần này",
+                      // SỬA: Thêm .summary
+                      homeData.summary.weekLessons.toString(),
                       Icons.calendar_view_week_outlined,
-                      Colors.green
-                  ),
+                      Colors.green),
                   _buildStatCard(
-                      "Tỷ lệ hoàn thành", // (Dữ liệu giả từ API)
-                      '${homeData.summary.completionPercent.toStringAsFixed(1)}%', // Dữ liệu API
+                      "Tỷ lệ hoàn thành",
+                      // SỬA: Thêm .summary
+                      '${homeData.summary.completionPercent.toStringAsFixed(1)}%',
                       Icons.pie_chart_outline,
-                      Colors.orange
-                  ),
+                      Colors.orange),
                 ],
               ),
-              // --- 👆 KẾT THÚC THAY ĐỔI ---
+              // --- 👆 KẾT THÚC SỬA LỖI ---
 
               SizedBox(height: 32),
 
@@ -114,22 +102,23 @@ class _DashboardContentState extends State<DashboardContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Lịch dạy hôm nay", // (Đây là lịch của PĐT)
+                    "Lịch dạy hôm nay",
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87),
                   ),
                   Text(
-                    // Lấy ngày hôm nay
-                    "Thứ ${DateTime.now().weekday + 1}, ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                    // Sửa logic Wday (Thứ 2=1, CN=7)
+                    "Thứ ${DateTime.now().weekday == 7 ? 'Chủ nhật' : DateTime.now().weekday + 1}, ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
                     style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                 ],
               ),
               SizedBox(height: 16),
 
-              // --- 👇 THAY ĐỔI: Dùng dữ liệu API ---
+              // ✅ PHẦN NÀY ĐÃ ĐÚNG
+              // vì 'todaySchedules' nằm trực tiếp trong 'homeData'
               if (homeData.todaySchedules.isEmpty)
                 Center(
                   child: Padding(
@@ -145,11 +134,9 @@ class _DashboardContentState extends State<DashboardContent> {
                   spacing: 24.0,
                   runSpacing: 24.0,
                   children: homeData.todaySchedules.map((schedule) {
-                    // Truyền đối tượng schedule vào hàm build
                     return _buildScheduleCard(schedule);
                   }).toList(),
                 )
-              // --- 👆 KẾT THÚC THAY ĐỔI ---
             ],
           ),
         );
@@ -157,7 +144,7 @@ class _DashboardContentState extends State<DashboardContent> {
     );
   }
 
-  // --- (Hàm _buildStatCard giữ nguyên) ---
+  // (Hàm này không đổi)
   Widget _buildStatCard(
       String title, String count, IconData icon, Color color) {
     return Container(
@@ -199,13 +186,10 @@ class _DashboardContentState extends State<DashboardContent> {
     );
   }
 
-  // --- 👇 THAY ĐỔI: Hàm này giờ nhận 1 đối tượng TodaySchedule ---
+  // ✅ HÀM NÀY ĐÃ ĐÚNG (khớp với model 'TodaySchedule')
   Widget _buildScheduleCard(TodaySchedule schedule) {
-    // API `home-summary` không trả về tên giảng viên
-    // (Vì đang xem bằng tài khoản PĐT).
-
     return Container(
-      width: 430, // Chiều rộng thẻ
+      width: 430,
       padding: EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -220,28 +204,23 @@ class _DashboardContentState extends State<DashboardContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tiêu đề (Tên môn học)
           Text(schedule.title,
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: tluBlue)),
           Divider(height: 24, color: Colors.grey.shade200),
-
-          //
-          // ✅ SỬA LỖI: Đồng bộ với Model. Sửa 'schedule.location' thành 'schedule.roomName'
-          //
           _buildScheduleRow(
-            schedule.courseCode, // Mã lớp
-            schedule.timeRange, // Giờ
-            schedule.roomName,  // Phòng (ĐÃ SỬA TỪ location)
+            schedule.courseCode,
+            schedule.timeRange,
+            schedule.roomName, // (Đã sửa từ location)
           ),
         ],
       ),
     );
   }
 
-  // --- 👇 THAY ĐỔI: Đơn giản hóa hàm này ---
+  // (Hàm này không đổi)
   Widget _buildScheduleRow(String className, String time, String room) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

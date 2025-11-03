@@ -1,9 +1,11 @@
 // File: lib/screens/khoa_screen.dart
+// [GIỮ NGUYÊN - Tệp này là khuôn mẫu cho style]
+
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../models/department.dart';
 import '../models/department_detail.dart'; // (Import)
-import '../table/user.dart';             // (Import)
+import '../table/user.dart'; // (Import)
 import '../models/major.dart';
 import '../models/division.dart';
 import 'dart:async'; // Cho debounce
@@ -527,9 +529,7 @@ class _KhoaScreenState extends State<KhoaScreen> {
           final teacher = teachers[index];
           return DataRow(cells: [
             DataCell(Text((index + 1).toString())),
-            // 👇 **** SỬA LỖI teacher.code **** 👇
             DataCell(Text('GV${teacher.id.toString().padLeft(3,'0')}')),
-            // 👆 **** KẾT THÚC SỬA LỖI **** 👆
             DataCell(Text(teacher.name)),
             DataCell(Text(teacher.email)),
           ]);

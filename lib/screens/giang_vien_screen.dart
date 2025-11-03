@@ -1,3 +1,5 @@
+// file: lib/screens/giang_vien_screen.dart
+
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
@@ -22,7 +24,20 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Lecturer>> _lecturersFuture;
 
-  final List<String> _departments = ['Công nghệ thông tin', 'Công trình', 'Cơ khí', 'Kinh tế'];
+  // Map<ID, Tên>
+  final Map<int, String> _departmentsMap = {
+    1: 'Khoa Công nghệ thông tin',
+    2: 'Khoa Kinh tế và Quản lý',
+    3: 'Khoa Kỹ thuật Xây dựng',
+    4: 'Khoa Kỹ thuật tài nguyên nước',
+    5: 'Khoa Cơ khí',
+    6: 'Khoa Điện - Điện tử',
+    7: 'Khoa Hóa và Môi trường',
+    8: 'Khoa Lý luận chính trị',
+    9: 'Viện Đào tạo và Khoa học ứng dụng Miền Trung',
+    10: 'Trung tâm Đào tạo quốc tế',
+  };
+
   String? _selectedDepartment;
   final TextEditingController _searchController = TextEditingController();
 
@@ -32,21 +47,15 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   // --- State cho phân trang ---
   int _currentPage = 1;
   final int _rowsPerPage = 10;
-
-  // --- 👇 1. THÊM HÀM HELPER NÀY ---
   void _goToPage(int page) {
-    // Đảm bảo trang nằm trong giới hạn hợp lệ
     final int totalItems = _filteredLecturers.length;
     final int totalPages = _rowsPerPage > 0 ? (totalItems / _rowsPerPage).ceil() : 0;
-
     if (page < 1) page = 1;
     if (page > totalPages && totalPages > 0) page = totalPages;
-
     setState(() {
       _currentPage = page;
     });
   }
-  // --- Hết phần thêm ---
 
   @override
   void initState() {
@@ -61,12 +70,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     });
     _lecturersFuture.then((data) {
       if (mounted) {
-        // Sắp xếp danh sách để mục mới nhất (ID cao nhất) lên đầu
         data.sort((a, b) => b.id.compareTo(a.id));
-
         setState(() {
           _allLecturers = data;
-          _filterData(); // Áp dụng bộ lọc để cập nhật UI
+          _filterData();
         });
       }
     }).catchError((error) {
@@ -98,8 +105,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     super.dispose();
   }
 
-  // --- LOGIC CHO THÊM / SỬA / XÓA ---
-  // (Giữ nguyên không đổi)
+  // --- (Các hàm _onSaveLecturer, _deleteLecturer, _showDeleteConfirmDialog giữ nguyên) ---
   void _onSaveLecturer(bool isEditing, Lecturer lecturer, String password) async {
     showDialog(
       context: context,
@@ -115,7 +121,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
         );
       } else {
         final data = lecturer.toJson();
-        data['password'] = password;
+        data['password'] = password; // Thêm mật khẩu khi tạo mới
         await _apiService.addLecturer(data);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Thêm giảng viên thành công!'), backgroundColor: Colors.green),
@@ -123,7 +129,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       }
       Navigator.of(context).pop(); // Đóng dialog loading
       Navigator.of(context).pop(); // Đóng dialog form
-      _loadLecturers(); // Tải lại dữ liệu để thấy thay đổi và sắp xếp
+      _loadLecturers(); // Tải lại dữ liệu
     } catch (e) {
       Navigator.of(context).pop(); // Đóng dialog loading
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +144,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Xóa giảng viên thành công!'), backgroundColor: Colors.red),
       );
-      _loadLecturers(); // Tải lại dữ liệu sau khi xóa
+      _loadLecturers();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi khi xóa: ${e.toString()}'), backgroundColor: Colors.red),
@@ -173,7 +179,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
   // --- CÁC DIALOG HIỂN THỊ ---
-  // (Giữ nguyên không đổi)
+
   void _showLecturerFormDialog({Lecturer? lecturer}) {
     final isEditing = lecturer != null;
     final formKey = GlobalKey<FormState>();
@@ -183,9 +189,16 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     final emailController = TextEditingController(text: isEditing ? lecturer.email : '');
     final phoneController = TextEditingController(text: isEditing ? lecturer.phoneNumber : '');
 
-    String? selectedDepartment = (isEditing && _departments.contains(lecturer.departmentName))
-        ? lecturer.departmentName
-        : null;
+    int? selectedDepartmentId;
+    if (isEditing) {
+      if (_departmentsMap.containsKey(lecturer.departmentId)) {
+        selectedDepartmentId = lecturer.departmentId;
+      } else {
+        selectedDepartmentId = null;
+      }
+    } else {
+      selectedDepartmentId = null;
+    }
 
     showDialog(
       context: context,
@@ -243,6 +256,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                             label: 'Tên giảng viên',
                                             controller: nameController,
                                             hint: 'Nhập tên giảng viên',
+                                            isRequired: true,
                                           ),
                                           const SizedBox(height: 20),
                                           _buildDatePickerField(context, dobController),
@@ -259,6 +273,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                             hint: 'Nhập email',
                                             keyboardType: TextInputType.emailAddress,
                                             enabled: !isEditing,
+                                            isRequired: true,
                                           ),
                                           const SizedBox(height: 20),
                                           _buildTextField(
@@ -269,10 +284,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                           ),
                                           const SizedBox(height: 20),
                                           _buildDepartmentDropdown(
-                                            selectedValue: selectedDepartment,
+                                            selectedValue: selectedDepartmentId,
                                             onChanged: (value) {
                                               setDialogState(() {
-                                                selectedDepartment = value;
+                                                selectedDepartmentId = value;
                                               });
                                             },
                                           ),
@@ -299,16 +314,24 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                                     ElevatedButton(
                                       onPressed: () {
                                         if (formKey.currentState!.validate()) {
-                                          final departmentId = _departments.indexOf(selectedDepartment!) + 1;
+                                          if (selectedDepartmentId == null) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Vui lòng chọn khoa'), backgroundColor: Colors.red),
+                                            );
+                                            return;
+                                          }
+
+                                          final departmentId = selectedDepartmentId!;
+                                          final departmentName = _departmentsMap[departmentId] ?? 'N/A';
 
                                           final newLecturer = Lecturer(
                                             id: isEditing ? lecturer.id : 0,
                                             departmentId: departmentId,
                                             fullName: nameController.text,
                                             email: emailController.text,
-                                            dob: dobController.text,
+                                            dob: dobController.text.isNotEmpty ? dobController.text : null,
                                             phoneNumber: phoneController.text,
-                                            departmentName: selectedDepartment!,
+                                            departmentName: departmentName,
                                           );
 
                                           _onSaveLecturer(isEditing, newLecturer, '123456');
@@ -430,14 +453,14 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
-  // --- CÁC WIDGET HELPER ---
-  // (Giữ nguyên không đổi)
+  // --- (Các widget helper: _buildTextField, _buildInfoField, _buildDatePickerField) ---
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
     required String hint,
     bool enabled = true,
     TextInputType? keyboardType,
+    bool isRequired = false, // Thêm cờ bắt buộc
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,8 +469,9 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           text: TextSpan(
             text: label,
             style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600),
-            children: const <TextSpan>[
-              TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+            children: <TextSpan>[
+              if (isRequired) // Chỉ hiển thị * nếu bắt buộc
+                const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
             ],
           ),
         ),
@@ -471,10 +495,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           validator: (value) {
-            if (value == null || value.isEmpty) {
+            if (isRequired && (value == null || value.isEmpty)) {
               return 'Trường này không được để trống';
             }
-            if (label == 'Email' && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            if (label == 'Email' && (value != null && value.isNotEmpty) && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
               return 'Vui lòng nhập email hợp lệ';
             }
             return null;
@@ -518,9 +542,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           text: const TextSpan(
             text: 'Ngày sinh',
             style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600),
-            children: <TextSpan>[
-              TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
-            ],
+            // Bỏ dấu * vì ngày sinh không bắt buộc
           ),
         ),
         const SizedBox(height: 8),
@@ -545,7 +567,7 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           onTap: () async {
             DateTime? pickedDate = await showDatePicker(
               context: context,
-              initialDate: DateTime.now(),
+              initialDate: DateTime.now().subtract(Duration(days: 365 * 20)),
               firstDate: DateTime(1950),
               lastDate: DateTime.now(),
             );
@@ -554,20 +576,17 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
               controller.text = formattedDate;
             }
           },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Vui lòng chọn ngày sinh';
-            }
-            return null;
-          },
+          // Bỏ validator vì không bắt buộc
         ),
       ],
     );
   }
 
+  // (Widget _buildDepartmentDropdown)
+  // <<< [FIX] ĐÃ SỬA LỖI OVERFLOW >>>
   Widget _buildDepartmentDropdown({
-    String? selectedValue,
-    required ValueChanged<String?> onChanged,
+    int? selectedValue,
+    required ValueChanged<int?> onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,12 +601,17 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<int>(
           value: selectedValue,
-          items: _departments.map((String department) {
-            return DropdownMenuItem<String>(
-              value: department,
-              child: Text(department),
+          isExpanded: true, // <<< FIX 1: Cho phép dropdown mở rộng
+          items: _departmentsMap.entries.map((entry) {
+            return DropdownMenuItem<int>(
+              value: entry.key,
+              child: Text(
+                entry.value,
+                overflow: TextOverflow.ellipsis, // <<< FIX 2: Thêm "..." nếu text quá dài
+                maxLines: 1,
+              ),
             );
           }).toList(),
           onChanged: onChanged,
@@ -612,10 +636,8 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
   }
 
 
-  // --- GIAO DIỆN CHÍNH ---
   @override
   Widget build(BuildContext context) {
-    // Tính toán dữ liệu cho trang hiện tại
     final int totalItems = _filteredLecturers.length;
     final int totalPages = _rowsPerPage > 0 ? (totalItems / _rowsPerPage).ceil() : 0;
     final int startIndex = (_currentPage - 1) * _rowsPerPage;
@@ -655,17 +677,11 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                   ),
                 );
               }
-              // Column này bây giờ an toàn vì nó nằm trong ListView
               return Column(
                 children: [
                   _buildDataTable(paginatedData),
                   const SizedBox(height: 16),
-
-                  // --- 👇 2. SỬA DÒNG NÀY ---
-                  // Truyền thêm totalItems vào
                   if (totalPages > 1) _buildPaginationControls(totalItems, totalPages),
-                  // --- Hết phần sửa ---
-
                 ],
               );
             },
@@ -710,10 +726,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
                         value: null,
                         child: Text("Tất cả Khoa"),
                       ),
-                      ..._departments.map((String value) {
+                      ..._departmentsMap.values.map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(value, overflow: TextOverflow.ellipsis), // Thêm overflow
                         );
                       }).toList(),
                     ],
@@ -806,10 +822,10 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       cells: [
         DataCell(Text(index.toString())),
         DataCell(Text(lecturer.fullName)),
-        DataCell(Text(lecturer.dob ?? 'N/A')),
+        DataCell(Text(lecturer.dob ?? 'N/A')), // <<< FIX: Hiển thị N/A nếu null
         DataCell(Text(lecturer.email)),
-        DataCell(Text(lecturer.phoneNumber ?? 'N/A')),
-        DataCell(Text(lecturer.departmentName)),
+        DataCell(Text(lecturer.phoneNumber ?? 'N/A')), // <<< FIX: Hiển thị N/A nếu null
+        DataCell(Text(lecturer.departmentName)), // <<< FIX: Hiển thị tên khoa
         DataCell(Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -822,7 +838,6 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
     );
   }
 
-  // --- 👇 3. THAY THẾ TOÀN BỘ HÀM NÀY ---
   Widget _buildPaginationControls(int totalItems, int totalPages) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -852,5 +867,4 @@ class _GiangVienScreenState extends State<GiangVienScreen> {
       ],
     );
   }
-// --- Hết phần thay thế ---
 }

@@ -1,45 +1,22 @@
-// lib/table/api_service.dart
+// file: lib/api_service.dart
 
-import 'dart:async'; // Từ File 2
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart'; // Từ File 1
+import 'package:intl/intl.dart';
 
-// Import models từ File 2
+// Import models
 import '../models/app_user.dart';
 import '../models/paginated_response.dart';
 import '../models/lecturer.dart';
-
-// Import models chung
 import '../models/schedule.dart';
+import '../models/room.dart'; // <-- ĐÃ THÊM
+import '../models/class_course_assignment.dart'; // <-- ĐÃ THÊM
+import 'models/pending_leave_request.dart';
+// Import models từ thư mục table (cho User và HomeSummary)
 import '../table/home_summary.dart';
 import '../table/user.dart';
-
-// (VÍ DỤ) Model đơn giản cho Room (từ File 1)
-class Room {
-  final int id;
-  final String name;
-  Room({required this.id, required this.name});
-  factory Room.fromJson(Map<String, dynamic> json) {
-    return Room(id: json['id'], name: json['name'] ?? 'N/A');
-  }
-}
-
-// (VÍ DỤ) Model đơn giản cho ClassCourseAssignment (từ File 1)
-class ClassCourseAssignment {
-  final int id;
-  final String displayName;
-  // Thêm các trường khác nếu cần để hiển thị hoặc lọc
-  ClassCourseAssignment({required this.id, required this.displayName});
-  factory ClassCourseAssignment.fromJson(Map<String, dynamic> json) {
-    return ClassCourseAssignment(
-        id: json['id'],
-        displayName: json['display_name'] ?? 'N/A'
-    );
-  }
-}
-
 
 class ApiService {
   // --- Singleton Pattern ---
@@ -64,7 +41,7 @@ class ApiService {
   String? _token;
   // --- End Authentication Token ---
 
-  // --- Helper for HTTP Headers (Sử dụng phiên bản File 2 vì có charset) ---
+  // --- Helper for HTTP Headers ---
   Map<String, String> _getHeaders({bool needsAuth = true}) {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -76,7 +53,7 @@ class ApiService {
     return headers;
   }
 
-  // --- setToken (Từ File 2) ---
+  // --- setToken ---
   void setToken(String? token) {
     _token = token;
   }
@@ -86,7 +63,7 @@ class ApiService {
   // ===================================================
 
   /// ---------------------------------------------------
-  /// 👤 Authentication: Login (Sử dụng logic từ File 1 vì mạnh mẽ hơn)
+  /// 👤 Authentication: Login
   /// ---------------------------------------------------
   Future<User> login(String email, String password) async {
     final Uri loginUrl = Uri.parse('$baseUrl/login');
@@ -99,20 +76,20 @@ class ApiService {
 
       final String responseBody = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        if(responseBody.isEmpty) {
+        if (responseBody.isEmpty) {
           throw Exception('Login successful but no user data received.');
         }
         final data = jsonDecode(responseBody);
         final User user = User.fromJson(data['user']);
 
         if (data['token'] != null) {
-          setToken(data['token']); // Sử dụng hàm setToken
+          setToken(data['token']);
           print("Login successful, Token stored!");
         } else {
           print("Warning: Login successful but no token received.");
         }
 
-        if (user.status == 'active') { // Kiểm tra status từ File 1
+        if (user.status == 'active') {
           return user;
         } else {
           throw Exception('❌ Your account has been disabled.');
@@ -128,7 +105,7 @@ class ApiService {
   }
 
   /// ---------------------------------------------------
-  /// 🏠 Home Screen Data (Sử dụng logic từ File 1 vì có kiểm tra body rỗng)
+  /// 🏠 Home Screen Data
   /// ---------------------------------------------------
   Future<HomeSummary> fetchHomeSummary(int userId) async {
     final Uri url = Uri.parse('$baseUrl/users/$userId/home-summary');
@@ -136,7 +113,7 @@ class ApiService {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
         final String responseBody = utf8.decode(response.bodyBytes);
-        if(responseBody.isEmpty) {
+        if (responseBody.isEmpty) {
           throw Exception('Failed to load home summary: Empty response.');
         }
         return HomeSummary.fromJson(jsonDecode(responseBody));
@@ -145,21 +122,44 @@ class ApiService {
       }
     } catch (e) {
       print("fetchHomeSummary Error: $e");
-      // Sử dụng cách throw lỗi chi tiết từ File 2 (trong File 1 gốc)
       throw Exception('Lỗi kết nối khi tải trang chủ: ${e.toString()}');
     }
   }
 
+  // --- 👇 HÀM ĐƯỢC BỔ SUNG (HomeScreen cần) ---
   /// ---------------------------------------------------
-  /// 👥 User Management (*** CẬP NHẬT TỪ FILE 2 ***)
+  /// 👤 Fetch User By ID (Needed by HomeScreen)
   /// ---------------------------------------------------
+  Future<User> fetchUserById(int userId) async {
+    final Uri url = Uri.parse('$baseUrl/users/$userId');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final String responseBody = utf8.decode(response.bodyBytes);
+        if (responseBody.isEmpty) {
+          throw Exception('Failed to load user: Empty response.');
+        }
+        // Giả sử API trả về { "data": { ...user... } }
+        final data = jsonDecode(responseBody);
+        return User.fromJson(data['data'] ?? data);
+      } else {
+        _handleApiError(response, 'Error loading user data');
+      }
+    } catch (e) {
+      print("fetchUserById Error: $e");
+      throw Exception('Lỗi kết nối khi tải người dùng: ${e.toString()}');
+    }
+  }
+  // --- 👆 KẾT THÚC HÀM ĐƯỢC BỔ SUNG ---
 
-  // 👇 ================== PHẦN ĐÃ SỬA ĐỔI (TỪ FILE 2) ================== 👇
-  Future<PaginatedUsersResponse> fetchUsers(int page, {String? searchQuery}) async {
+  /// ---------------------------------------------------
+  /// 👥 User Management
+  /// ---------------------------------------------------
+  Future<PaginatedUsersResponse> fetchUsers(int page,
+      {String? searchQuery}) async {
     final Uri baseUri = Uri.parse('$baseUrl/users');
     final Map<String, String> queryParameters = {
       'page': page.toString(),
-      // Thêm tham số 'name' nếu có chuỗi tìm kiếm
       if (searchQuery != null && searchQuery.isNotEmpty) 'name': searchQuery,
     };
     final Uri url = baseUri.replace(queryParameters: queryParameters);
@@ -176,7 +176,6 @@ class ApiService {
       throw Exception('Lỗi kết nối khi tải người dùng: ${e.toString()}');
     }
   }
-  // 👆 ================== KẾT THÚC PHẦN SỬA ĐỔI ================== 👆
 
   Future<AppUser> addUser(Map<String, dynamic> userData) async {
     final Uri url = Uri.parse('$baseUrl/users');
@@ -229,7 +228,7 @@ class ApiService {
   }
 
   /// ---------------------------------------------------
-  /// 👨‍🏫 Lecturer Management (Từ File 1, vốn đã gộp từ File 2)
+  /// 👨‍🏫 Lecturer Management
   /// ---------------------------------------------------
   Future<List<Lecturer>> fetchLecturers() async {
     final Uri url = Uri.parse('$baseUrl/lecturers');
@@ -297,14 +296,15 @@ class ApiService {
   }
 
   /// ---------------------------------------------------
-  /// 🗓️ Schedule Management (Từ File 1)
+  /// 🗓️ Schedule Management
   /// ---------------------------------------------------
   Future<List<Schedule>> fetchSchedules() async {
     final Uri url = Uri.parse('$baseUrl/schedules');
     try {
       final response = await http.get(url, headers: _getHeaders());
       if (response.statusCode == 200) {
-        final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
+        final List<dynamic> dataList =
+        jsonDecode(utf8.decode(response.bodyBytes));
         return dataList.map((item) => Schedule.fromJson(item)).toList();
       } else {
         _handleApiError(response, 'Error loading schedule list');
@@ -319,7 +319,8 @@ class ApiService {
     final Uri url = Uri.parse('$baseUrl/rooms');
     final response = await http.get(url, headers: _getHeaders());
     if (response.statusCode == 200) {
-      final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
+      final List<dynamic> dataList =
+      jsonDecode(utf8.decode(response.bodyBytes));
       return dataList.map((item) => Room.fromJson(item)).toList();
     } else {
       _handleApiError(response, 'Error loading rooms');
@@ -330,8 +331,11 @@ class ApiService {
     final Uri url = Uri.parse('$baseUrl/classcourseassignments');
     final response = await http.get(url, headers: _getHeaders());
     if (response.statusCode == 200) {
-      final List<dynamic> dataList = jsonDecode(utf8.decode(response.bodyBytes));
-      return dataList.map((item) => ClassCourseAssignment.fromJson(item)).toList();
+      final List<dynamic> dataList =
+      jsonDecode(utf8.decode(response.bodyBytes));
+      return dataList
+          .map((item) => ClassCourseAssignment.fromJson(item))
+          .toList();
     } else {
       _handleApiError(response, 'Error loading assignments');
     }
@@ -395,16 +399,96 @@ class ApiService {
   }
 
   /// ---------------------------------------------------
-  /// ⚠️ Error Handler (Sử dụng phiên bản từ File 2 vì xử lý lỗi validation)
+  /// ⚠️ Error Handler
+  /// ---------------------------------------------------
+  // Never _handleApiError(http.Response response, String defaultMessage) {
+  //   try {
+  //     print(
+  //         "API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
+  //
+  //     final error = jsonDecode(utf8.decode(response.bodyBytes));
+  //     if (error is Map && error.containsKey('message')) {
+  //       if (error.containsKey('errors')) {
+  //         final errors = error['errors'] as Map;
+  //         final firstError = errors.values.first;
+  //         if (firstError is List && firstError.isNotEmpty) {
+  //           throw Exception(firstError.first);
+  //         }
+  //       }
+  //       throw Exception(error['message']);
+  //     }
+  //     throw Exception(error.toString());
+  //   } catch (e) {
+  //     if (e is FormatException || e is TypeError) {
+  //       throw Exception('$defaultMessage (Code: ${response.statusCode})');
+  //     }
+  //     rethrow;
+  //   }
+  // }
+  Future<List<PendingLeaveRequest>> fetchPendingLeaveRequests() async {
+    // Giả sử API endpoint là /admin/leave-requests/pending
+    final Uri url = Uri.parse('$baseUrl/admin/leave-requests/pending');
+    try {
+      final response = await http.get(url, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final List<dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
+        return body.map((item) => PendingLeaveRequest.fromJson(item)).toList();
+      } else {
+        return _handleApiError(response, 'Lỗi khi tải danh sách chờ duyệt');
+      }
+    } catch (e) {
+      print("fetchPendingLeaveRequests Error: $e");
+      rethrow;
+    }
+  }
+
+  // 👈 THÊM 2: Duyệt (approve) đơn
+  Future<void> approveLeaveRequest(int requestId) async {
+    // Giả sử API endpoint là /admin/leave-requests/{id}/approve
+    final Uri url = Uri.parse('$baseUrl/admin/leave-requests/$requestId/approve');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode({'status': 'approved'}), // Gửi kèm trạng thái mới
+      );
+      if (response.statusCode != 200) {
+        _handleApiError(response, 'Lỗi khi duyệt đơn');
+      }
+    } catch (e) {
+      print("approveLeaveRequest Error: $e");
+      rethrow;
+    }
+  }
+
+  // 👈 THÊM 3: Từ chối (reject) đơn
+  Future<void> rejectLeaveRequest(int requestId) async {
+    // Giả sử API endpoint là /admin/leave-requests/{id}/reject
+    final Uri url = Uri.parse('$baseUrl/admin/leave-requests/$requestId/reject');
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode({'status': 'rejected'}), // Gửi kèm trạng thái mới
+      );
+      if (response.statusCode != 200) {
+        _handleApiError(response, 'Lỗi khi từ chối đơn');
+      }
+    } catch (e) {
+      print("rejectLeaveRequest Error: $e");
+      rethrow;
+    }
+  }
+
+
+  /// ---------------------------------------------------
+  /// ⚙️ Hàm xử lý lỗi API chung (Private Helper)
   /// ---------------------------------------------------
   Never _handleApiError(http.Response response, String defaultMessage) {
+    print("API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
     try {
-      // Ghi lại log lỗi
-      print("API Error (${response.request?.url}): ${response.statusCode} - ${response.body}");
-
       final error = jsonDecode(utf8.decode(response.bodyBytes));
       if (error is Map && error.containsKey('message')) {
-        // Xử lý lỗi validation của Laravel
         if(error.containsKey('errors')) {
           final errors = error['errors'] as Map;
           final firstError = errors.values.first;
@@ -412,17 +496,13 @@ class ApiService {
             throw Exception(firstError.first);
           }
         }
-        // Lỗi chung từ server
         throw Exception(error['message']);
       }
-      // Lỗi không xác định
       throw Exception(error.toString());
     } catch (e) {
-      // Nếu không thể decode JSON (ví dụ: lỗi 500 trả về HTML)
-      if (e is FormatException || e is TypeError) {
+      if (e is FormatException) {
         throw Exception('$defaultMessage (Code: ${response.statusCode})');
       }
-      // Ném lại lỗi đã được xử lý (ví dụ: lỗi validation)
       rethrow;
     }
   }

@@ -221,9 +221,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE",
-              onTap: () { /* TODO: Cập nhật index khi có màn hình */ }
-          ),
+          // _buildMenuItem("THỐNG KÊ - BÁO CÁO", "THONG_KE",
+          //     onTap: () { /* TODO: Cập nhật index khi có màn hình */ }
+          // ),
           _buildMenuDivider(),
 
           _buildMenuItem(
